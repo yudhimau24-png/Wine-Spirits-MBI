@@ -232,9 +232,11 @@
   </div>
 
   <script>
-    /* ISIKAN DENGAN KREDENSIAL SUPABASE MILIKMU */
+    /* KREDENSIAL SUPABASE */
     const SUPABASE_URL = "https://gzozsdbtcmmwzogzyeyn.supabase.co";
-    const SUPABASE_KEY = "gzozsdbtcmmwzogzyeyn";
+    /* PASTE ANON PUBLIC KEY KAMU DI BAWAH INI: */
+    const SUPABASE_KEY = "PASTE_ANON_PUBLIC_KEY_KAMU_DISINI"; 
+    
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
     const ADMIN_USER = "admin";
@@ -346,8 +348,20 @@
     async function loadAdminData() {
       try {
         const { data, error } = await supabaseClient.from('wines').select('*');
-        if (!error && data) {
-          adminWines = data;
+        if (error) {
+          console.error('Error loading Supabase data:', error);
+          alert('Gagal memuat data admin: ' + error.message);
+          return;
+        }
+        if (data) {
+          // Normalisasi nama kolom camelCase dan snake_case
+          adminWines = data.map(w => ({
+            ...w,
+            servingTemp: w.servingTemp || w.serving_temp || '',
+            stockStatus: w.stockStatus || w.stock_status || 'In Stock',
+            imageUrl: w.imageUrl || w.image_url || '',
+            storageNote: w.storageNote || w.storage_note || ''
+          }));
           renderAdminTable();
         }
       } catch (err) { console.error('Error loading Supabase data:', err); }
@@ -431,12 +445,12 @@
         region: document.getElementById('wineRegion').value,
         varietal: document.getElementById('wineVarietal').value,
         abv: document.getElementById('wineAbv').value,
-        servingTemp: document.getElementById('wineServingTemp').value,
-        stockStatus: document.getElementById('wineStockStatus').value,
-        imageUrl: imageUrl,
+        serving_temp: document.getElementById('wineServingTemp').value,
+        stock_status: document.getElementById('wineStockStatus').value,
+        image_url: imageUrl,
         notes: document.getElementById('wineNotes').value,
         pairing: document.getElementById('winePairing').value,
-        storageNote: document.getElementById('wineStorageNote').value
+        storage_note: document.getElementById('wineStorageNote').value
       };
 
       let res;
@@ -481,18 +495,20 @@
           region: row.Region || row.region || '-',
           varietal: row.Varietal || row.varietal || '-',
           abv: row.ABV || row.abv || '-',
-          servingTemp: row.ServingTemp || row.servingTemp || '-',
-          stockStatus: row.StockStatus || row.stockStatus || 'In Stock',
-          imageUrl: row.ImageUrl || row.imageUrl || '',
+          serving_temp: row.ServingTemp || row.servingTemp || row.serving_temp || '-',
+          stock_status: row.StockStatus || row.stockStatus || row.stock_status || 'In Stock',
+          image_url: row.ImageUrl || row.imageUrl || row.image_url || '',
           notes: row.Notes || row.notes || '-',
           pairing: row.Pairing || row.pairing || '-',
-          storageNote: row.StorageNote || row.storageNote || '-'
+          storage_note: row.StorageNote || row.storageNote || row.storage_note || '-'
         }));
 
         const { error } = await supabaseClient.from('wines').insert(formatted);
         if (!error) {
           alert(`Berhasil mengimpor ${formatted.length} produk ke Supabase!`);
           loadAdminData();
+        } else {
+          alert('Gagal import: ' + error.message);
         }
       };
       reader.readAsArrayBuffer(file);
