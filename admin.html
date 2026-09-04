@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Portal - Private Reserve Collection</title>
+  <!-- Supabase & SheetJS SDK -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background-color: #070505; color: #e0e0e0; padding-bottom: 2rem; min-height: 100vh; position: relative; overflow-x: hidden; }
+    #bgCanvas { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; pointer-events: none; z-index: 0; }
+
+    .login-overlay {
+      position: fixed; inset: 0;
+      background: radial-gradient(circle at center, rgba(35, 18, 18, 0.95) 0%, rgba(7, 5, 5, 0.98) 100%);
+      backdrop-filter: blur(16px); z-index: 10000;
+      display: flex; align-items: center; justify-content: center; padding: 1.5rem;
+    }
+    .login-card {
+      width: 100%; max-width: 420px;
+      background: linear-gradient(135deg, rgba(28, 16, 16, 0.95) 0%, rgba(12, 8, 8, 0.98) 100%);
+      border: 1px solid rgba(216, 178, 85, 0.35); border-radius: 22px; padding: 2.5rem 2rem; text-align: center;
+    }
+    .login-card h2 { color: #d8b255; font-family: 'Georgia', serif; font-size: 1.8rem; margin-bottom: 0.4rem; }
+    .login-error { background: rgba(229, 57, 53, 0.15); border: 1px solid rgba(229, 57, 53, 0.4); color: #ef5350; font-size: 0.82rem; padding: 0.6rem; border-radius: 8px; margin-bottom: 1rem; display: none; }
+
+    #adminPage { position: relative; z-index: 1; max-width: 1300px; margin: 0 auto; padding: 0 1.2rem; display: none; }
+    .hero { text-align: center; padding: 3rem 1rem 2rem; background: radial-gradient(circle at 50% -20%, #3a1c1c 0%, #120909 60%, #070505 100%); border-bottom: 1px solid rgba(216, 178, 85, 0.2); margin-bottom: 2rem; border-radius: 0 0 20px 20px; position: relative; }
+    .hero h1 { color: #d8b255; font-size: 2.2rem; font-family: 'Georgia', serif; }
+
+    .btn-logout { position: absolute; top: 15px; right: 20px; background: rgba(229, 57, 53, 0.15); border: 1px solid rgba(229, 57, 53, 0.4); color: #ef5350; padding: 0.5rem 1rem; border-radius: 20px; font-size: 0.8rem; font-weight: 700; cursor: pointer; }
+    .btn-logout:hover { background: #e53935; color: #fff; }
+
+    .admin-card { background: rgba(24, 14, 14, 0.85); border: 1px solid rgba(216, 178, 85, 0.25); border-radius: 18px; padding: 1.8rem; margin-bottom: 2rem; backdrop-filter: blur(12px); }
+    .admin-card h2 { color: #d8b255; font-family: 'Georgia', serif; font-size: 1.3rem; margin-bottom: 1.2rem; border-bottom: 1px solid rgba(216, 178, 85, 0.15); padding-bottom: 0.6rem; }
+
+    .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.2rem; }
+    .form-group { display: flex; flex-direction: column; gap: 0.4rem; text-align: left; }
+    .form-group.full-width { grid-column: 1 / -1; }
+    label { font-size: 0.8rem; color: #d8b255; font-weight: 600; text-transform: uppercase; }
+
+    input, select, textarea { padding: 0.75rem 1rem; border-radius: 10px; border: 1px solid rgba(216, 178, 85, 0.25); background: rgba(12, 8, 8, 0.8); color: #fff; font-size: 0.88rem; outline: none; }
+    input[type="file"] { padding: 0.5rem; background: rgba(30, 18, 18, 0.6); cursor: pointer; }
+
+    .btn-group { display: flex; gap: 0.8rem; margin-top: 1.2rem; flex-wrap: wrap; }
+    .btn-gold { padding: 0.75rem 1.8rem; border-radius: 10px; border: none; background: linear-gradient(135deg, #d8b255 0%, #b89235 100%); color: #0b0808; font-weight: 800; font-size: 0.9rem; cursor: pointer; }
+    .btn-gold:hover { background: linear-gradient(135deg, #e5c065 0%, #c9a042 100%); }
+    .btn-secondary { padding: 0.75rem 1.5rem; border-radius: 10px; border: 1px solid rgba(216, 178, 85, 0.3); background: transparent; color: #d8b255; font-weight: 600; cursor: pointer; }
+
+    .image-preview-container { display: flex; align-items: center; gap: 1rem; margin-top: 0.5rem; }
+    .image-preview-box { width: 70px; height: 70px; border-radius: 10px; border: 1px dashed rgba(216, 178, 85, 0.4); background: #000; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+    .image-preview-box img { max-width: 100%; max-height: 100%; object-fit: contain; }
+
+    .table-responsive { overflow-x: auto; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.08); }
+    table { width: 100%; border-collapse: collapse; text-align: left; font-size: 0.85rem; }
+    th { background: rgba(35, 20, 20, 0.9); color: #d8b255; padding: 1rem; font-weight: 700; text-transform: uppercase; font-size: 0.75rem; border-bottom: 1px solid rgba(216, 178, 85, 0.2); }
+    td { padding: 0.85rem 1rem; border-bottom: 1px solid rgba(255, 255, 255, 0.05); color: #d0d0d0; }
+    .thumb-img { width: 45px; height: 45px; object-fit: contain; border-radius: 6px; background: #000; padding: 2px; border: 1px solid rgba(216, 178, 85, 0.2); }
+
+    .btn-sm-edit { padding: 0.4rem 0.8rem; border-radius: 6px; border: 1px solid #d8b255; background: transparent; color: #d8b255; cursor: pointer; }
+    .btn-sm-del { padding: 0.4rem 0.8rem; border-radius: 6px; border: 1px solid #e53935; background: transparent; color: #e53935; cursor: pointer; }
+
+    footer { text-align: center; padding: 2.5rem 1rem 1rem; margin-top: 3rem; border-top: 1px solid rgba(216, 178, 85, 0.15); color: #776666; font-size: 0.85rem; }
+    footer strong { color: #d8b255; }
+  </style>
+</head>
+<body>
+
+  <canvas id="bgCanvas"></canvas>
+
+  <div id="loginOverlay" class="login-overlay">
+    <div class="login-card">
+      <h2>🔐 Akses Admin</h2>
+      <p>Private Reserve Collection Management</p>
+      <div id="loginError" class="login-error">Username atau Password salah!</div>
+      <form id="loginForm" onsubmit="handleLogin(event)">
+        <div class="form-group" style="margin-bottom: 1.2rem;">
+          <label>Username</label>
+          <input type="text" id="loginUser" required placeholder="Masukkan username" value="admin">
+        </div>
+        <div class="form-group" style="margin-bottom: 1.5rem;">
+          <label>Password</label>
+          <input type="password" id="loginPass" required placeholder="••••••••">
+        </div>
+        <button type="submit" class="btn-gold" style="width: 100%;">🚀 Masuk Dashboard</button>
+      </form>
+    </div>
+  </div>
+
+  <div id="adminPage">
+    <div class="hero">
+      <button class="btn-logout" onclick="handleLogout()">🔒 Logout</button>
+      <h1>⚙️ Admin Dashboard - Private Reserve</h1>
+      <p>Kelola data katalog minuman, stok, upload gambar ke Cloud Supabase, dan import file Excel/CSV.</p>
+    </div>
+
+    <!-- IMPORT EXCEL -->
+    <div class="admin-card">
+      <h2>📂 Import Massal (Excel / CSV)</h2>
+      <div class="form-grid">
+        <div class="form-group full-width">
+          <label>Pilih File Excel / CSV</label>
+          <input type="file" id="excelFileInput" accept=".xlsx, .xls, .csv">
+        </div>
+      </div>
+      <div class="btn-group">
+        <button type="button" class="btn-gold" onclick="importExcelFile()">📥 Proses & Import Ke Supabase</button>
+      </div>
+    </div>
+
+    <!-- FORM WINE -->
+    <div class="admin-card">
+      <h2 id="formTitle">✨ Tambah Minuman Baru</h2>
+      <form id="wineForm" onsubmit="saveWine(event)">
+        <input type="hidden" id="wineId">
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Nama Minuman *</label>
+            <input type="text" id="wineName" required placeholder="Contoh: CHATEAU HAUT MADRAC">
+          </div>
+          <div class="form-group">
+            <label>Vintage (Tahun)</label>
+            <input type="text" id="wineVintage" placeholder="Contoh: 2021 atau NV">
+          </div>
+          <div class="form-group">
+            <label>Kategori (Type) *</label>
+            <select id="wineType" required>
+              <option value="Red Wine">Red Wine</option>
+              <option value="White Wine">White Wine</option>
+              <option value="Rosé Wine">Rosé Wine</option>
+              <option value="Sparkling Wine">Sparkling Wine</option>
+              <option value="Whisky / Whiskey">Whisky / Whiskey</option>
+              <option value="Vodka">Vodka</option>
+              <option value="Rum">Rum</option>
+              <option value="Gin">Gin</option>
+              <option value="Tequila / Mezcal">Tequila / Mezcal</option>
+              <option value="Brandy / Cognac">Brandy / Cognac</option>
+              <option value="Liqueur">Liqueur</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Wilayah (Region)</label>
+            <input type="text" id="wineRegion" placeholder="Contoh: France">
+          </div>
+          <div class="form-group">
+            <label>Varietal / Grape</label>
+            <input type="text" id="wineVarietal" placeholder="Contoh: Bordeaux Blend">
+          </div>
+          <div class="form-group">
+            <label>Alcohol (ABV)</label>
+            <input type="text" id="wineAbv" placeholder="Contoh: 13-14%">
+          </div>
+          <div class="form-group">
+            <label>Suhu Penyajian</label>
+            <input type="text" id="wineServingTemp" placeholder="Contoh: 16-18°C">
+          </div>
+          <div class="form-group">
+            <label>Status Stok</label>
+            <select id="wineStockStatus">
+              <option value="In Stock">In Stock (Tersedia)</option>
+              <option value="Limited Stock">Limited Stock (Terbatas)</option>
+              <option value="Out of Stock">Out of Stock (Habis)</option>
+            </select>
+          </div>
+
+          <div class="form-group full-width">
+            <label>📸 Upload Foto Produk (Supabase Cloud Storage)</label>
+            <input type="file" id="wineImageFile" accept="image/*" onchange="previewUploadedImage(event)">
+            
+            <label style="margin-top: 0.8rem;">Atau URL Gambar External (Opsional)</label>
+            <input type="text" id="wineImageUrl" placeholder="https://example.com/botol.jpg" oninput="previewUrlImage(this.value)">
+
+            <div class="image-preview-container">
+              <div class="image-preview-box">
+                <img id="imgPreview" src="https://via.placeholder.com/70?text=Preview" alt="Preview">
+              </div>
+              <span style="font-size: 0.8rem; color: #888;">Preview foto botol</span>
+            </div>
+          </div>
+
+          <div class="form-group full-width">
+            <label>Tasting Notes</label>
+            <textarea id="wineNotes" placeholder="Deskripsi rasa..."></textarea>
+          </div>
+          <div class="form-group full-width">
+            <label>Food Pairing</label>
+            <input type="text" id="winePairing" placeholder="Contoh: Roast Beef, Lamb">
+          </div>
+          <div class="form-group full-width">
+            <label>Storage Note</label>
+            <input type="text" id="wineStorageNote" placeholder="Contoh: Simpan miring">
+          </div>
+        </div>
+        <div class="btn-group">
+          <button type="submit" class="btn-gold" id="btnSaveWine">➕ Simpan Ke Supabase</button>
+          <button type="button" class="btn-secondary" onclick="resetForm()">🔄 Reset Form</button>
+        </div>
+      </form>
+    </div>
+
+    <!-- TABEL KATALOG -->
+    <div class="admin-card">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; flex-wrap:wrap;">
+        <h2>🍷 Daftar Katalog Minuman</h2>
+        <input type="text" id="adminSearch" style="width:250px;" placeholder="Cari nama / wilayah..." oninput="renderAdminTable()">
+      </div>
+
+      <div class="table-responsive">
+        <table>
+          <thead>
+            <tr>
+              <th>Gambar</th>
+              <th>Nama Minuman</th>
+              <th>Vintage</th>
+              <th>Kategori</th>
+              <th>Wilayah</th>
+              <th>ABV</th>
+              <th>Stok</th>
+              <th>Aksi</th>
+            </tr>
+          </thead>
+          <tbody id="adminTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <footer>
+      <p>&copy; 2026 Copyright by <strong>Mitra Buana Intimas</strong>. All Rights Reserved.</p>
+    </footer>
+  </div>
+
+  <script>
+    /* ISIKAN DENGAN KREDENSIAL SUPABASE MILIKMU */
+    const SUPABASE_URL = "YOUR_SUPABASE_URL_HERE";
+    const SUPABASE_KEY = "YOUR_SUPABASE_ANON_KEY_HERE";
+    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    const ADMIN_USER = "admin";
+    const ADMIN_PASS = "admin123";
+
+    function checkAuthStatus() {
+      if (sessionStorage.getItem('mbi_admin_auth') === 'true') {
+        document.getElementById('loginOverlay').style.display = 'none';
+        document.getElementById('adminPage').style.display = 'block';
+        loadAdminData();
+      } else {
+        document.getElementById('loginOverlay').style.display = 'flex';
+        document.getElementById('adminPage').style.display = 'none';
+      }
+    }
+
+    function handleLogin(e) {
+      e.preventDefault();
+      if (document.getElementById('loginUser').value.trim() === ADMIN_USER && 
+          document.getElementById('loginPass').value.trim() === ADMIN_PASS) {
+        sessionStorage.setItem('mbi_admin_auth', 'true');
+        checkAuthStatus();
+      } else {
+        document.getElementById('loginError').style.display = 'block';
+      }
+    }
+
+    function handleLogout() {
+      sessionStorage.removeItem('mbi_admin_auth');
+      checkAuthStatus();
+    }
+
+    /* Background Canvas Engine */
+    const canvas = document.getElementById('bgCanvas');
+    const ctx = canvas.getContext('2d');
+    let width = canvas.width = window.innerWidth;
+    let height = canvas.height = window.innerHeight;
+    let mouse = { x: width / 2, y: height / 2, active: false };
+
+    window.addEventListener('resize', () => { width = canvas.width = window.innerWidth; height = canvas.height = window.innerHeight; });
+    window.addEventListener('mousemove', (e) => { mouse.x = e.clientX; mouse.y = e.clientY; mouse.active = true; });
+
+    const particles = Array.from({ length: 65 }, () => ({
+      x: Math.random() * width, y: Math.random() * height,
+      radius: Math.random() * 2.5 + 0.5, alpha: Math.random() * 0.5 + 0.1,
+      vx: (Math.random() - 0.5) * 0.4, vy: -(Math.random() * 0.4 + 0.2)
+    }));
+
+    function drawInteractiveBG() {
+      ctx.clearRect(0, 0, width, height);
+      if (mouse.active) {
+        const gradient = ctx.createRadialGradient(mouse.x, mouse.y, 0, mouse.x, mouse.y, 380);
+        gradient.addColorStop(0, 'rgba(216, 178, 85, 0.09)');
+        gradient.addColorStop(0.5, 'rgba(120, 30, 30, 0.04)');
+        gradient.addColorStop(1, 'transparent');
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, width, height);
+      }
+      particles.forEach(p => {
+        p.x += p.vx; p.y += p.vy;
+        if (mouse.active) {
+          const dx = mouse.x - p.x, dy = mouse.y - p.y, dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist < 120) { p.x -= Math.cos(Math.atan2(dy, dx)) * 1.5; p.y -= Math.sin(Math.atan2(dy, dx)) * 1.5; }
+        }
+        if (p.y < -10) { p.y = height + 10; p.x = Math.random() * width; }
+        ctx.beginPath(); ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(216, 178, 85, ${p.alpha})`; ctx.shadowBlur = 8; ctx.shadowColor = '#d8b255'; ctx.fill();
+      });
+      requestAnimationFrame(drawInteractiveBG);
+    }
+    drawInteractiveBG();
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+    }
+
+    let selectedFileForUpload = null;
+
+    function previewUploadedImage(event) {
+      const file = event.target.files[0];
+      if (file) {
+        selectedFileForUpload = file;
+        const reader = new FileReader();
+        reader.onload = function(e) { document.getElementById('imgPreview').src = e.target.result; };
+        reader.readAsDataURL(file);
+      }
+    }
+
+    function previewUrlImage(url) {
+      if (url) { selectedFileForUpload = null; document.getElementById('imgPreview').src = url; }
+    }
+
+    async function uploadImageToSupabase(file) {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `bottle_${Date.now()}_${Math.random().toString(36).substring(2, 7)}.${fileExt}`;
+      const { data, error } = await supabaseClient.storage.from('bottle-images').upload(fileName, file);
+
+      if (error) {
+        alert('Gagal upload gambar ke Supabase: ' + error.message);
+        return null;
+      }
+      const { data: publicUrlData } = supabaseClient.storage.from('bottle-images').getPublicUrl(fileName);
+      return publicUrlData.publicUrl;
+    }
+
+    let adminWines = [];
+
+    async function loadAdminData() {
+      try {
+        const { data, error } = await supabaseClient.from('wines').select('*');
+        if (!error && data) {
+          adminWines = data;
+          renderAdminTable();
+        }
+      } catch (err) { console.error('Error loading Supabase data:', err); }
+    }
+
+    function renderAdminTable() {
+      const tbody = document.getElementById('adminTableBody');
+      const search = document.getElementById('adminSearch').value.toLowerCase();
+      const filtered = adminWines.filter(w => (w.name && w.name.toLowerCase().includes(search)) || (w.region && w.region.toLowerCase().includes(search)));
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; color:#888; padding:2rem;">Tidak ada data.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = filtered.map((w) => `
+        <tr>
+          <td><img src="${w.imageUrl || 'https://via.placeholder.com/45'}" class="thumb-img" onerror="this.src='https://via.placeholder.com/45'"></td>
+          <td><strong>${escapeHtml(w.name)}</strong></td>
+          <td>${escapeHtml(w.vintage) || '-'}</td>
+          <td>${escapeHtml(w.type) || '-'}</td>
+          <td>${escapeHtml(w.region) || '-'}</td>
+          <td>${escapeHtml(w.abv) || '-'}</td>
+          <td><span style="color:${w.stockStatus && w.stockStatus.includes('Habis') ? '#e53935' : '#4CAF50'}">${escapeHtml(w.stockStatus) || 'In Stock'}</span></td>
+          <td>
+            <div class="action-btns">
+              <button class="btn-sm-edit" onclick="editWine('${w.id}')">✏️ Edit</button>
+              <button class="btn-sm-del" onclick="deleteWine('${w.id}')">🗑️ Hapus</button>
+            </div>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function editWine(id) {
+      const w = adminWines.find(item => item.id == id);
+      if (!w) return;
+
+      document.getElementById('wineId').value = w.id;
+      document.getElementById('wineName').value = w.name || '';
+      document.getElementById('wineVintage').value = w.vintage || '';
+      document.getElementById('wineType').value = w.type || 'Red Wine';
+      document.getElementById('wineRegion').value = w.region || '';
+      document.getElementById('wineVarietal').value = w.varietal || '';
+      document.getElementById('wineAbv').value = w.abv || '';
+      document.getElementById('wineServingTemp').value = w.servingTemp || '';
+      document.getElementById('wineStockStatus').value = w.stockStatus || 'In Stock';
+      document.getElementById('wineImageUrl').value = w.imageUrl || '';
+      document.getElementById('imgPreview').src = w.imageUrl || 'https://via.placeholder.com/70?text=Preview';
+      document.getElementById('wineNotes').value = w.notes || '';
+      document.getElementById('winePairing').value = w.pairing || '';
+      document.getElementById('wineStorageNote').value = w.storageNote || '';
+
+      document.getElementById('formTitle').innerText = '✏️ Edit Data Minuman';
+      document.getElementById('btnSaveWine').innerText = '💾 Update Data Minuman';
+    }
+
+    function resetForm() {
+      document.getElementById('wineId').value = '';
+      document.getElementById('wineForm').reset();
+      selectedFileForUpload = null;
+      document.getElementById('imgPreview').src = 'https://via.placeholder.com/70?text=Preview';
+      document.getElementById('formTitle').innerText = '✨ Tambah Minuman Baru';
+      document.getElementById('btnSaveWine').innerText = '➕ Simpan Ke Supabase';
+    }
+
+    async function saveWine(e) {
+      e.preventDefault();
+      const id = document.getElementById('wineId').value;
+      let imageUrl = document.getElementById('wineImageUrl').value;
+
+      if (selectedFileForUpload) {
+        const uploadedUrl = await uploadImageToSupabase(selectedFileForUpload);
+        if (uploadedUrl) imageUrl = uploadedUrl;
+      }
+
+      const wineData = {
+        name: document.getElementById('wineName').value,
+        vintage: document.getElementById('wineVintage').value,
+        type: document.getElementById('wineType').value,
+        region: document.getElementById('wineRegion').value,
+        varietal: document.getElementById('wineVarietal').value,
+        abv: document.getElementById('wineAbv').value,
+        servingTemp: document.getElementById('wineServingTemp').value,
+        stockStatus: document.getElementById('wineStockStatus').value,
+        imageUrl: imageUrl,
+        notes: document.getElementById('wineNotes').value,
+        pairing: document.getElementById('winePairing').value,
+        storageNote: document.getElementById('wineStorageNote').value
+      };
+
+      let res;
+      if (id) {
+        res = await supabaseClient.from('wines').update(wineData).eq('id', id);
+      } else {
+        res = await supabaseClient.from('wines').insert([wineData]);
+      }
+
+      if (res.error) {
+        alert('Gagal menyimpan: ' + res.error.message);
+      } else {
+        alert('Data berhasil disimpan ke Supabase!');
+        resetForm();
+        loadAdminData();
+      }
+    }
+
+    async function deleteWine(id) {
+      if (!confirm('Yakin hapus dari Supabase?')) return;
+      const { error } = await supabaseClient.from('wines').delete().eq('id', id);
+      if (!error) {
+        alert('Data berhasil dihapus!');
+        loadAdminData();
+      }
+    }
+
+    async function importExcelFile() {
+      const file = document.getElementById('excelFileInput').files[0];
+      if (!file) return alert('Pilih file dulu!');
+
+      const reader = new FileReader();
+      reader.onload = async function(e) {
+        const data = new Uint8Array(e.target.result);
+        const workbook = XLSX.read(data, { type: 'array' });
+        const jsonData = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
+
+        const formatted = jsonData.map(row => ({
+          name: row.Name || row.name || '',
+          vintage: row.Vintage || row.vintage || 'NV',
+          type: row.Type || row.type || 'Red Wine',
+          region: row.Region || row.region || '-',
+          varietal: row.Varietal || row.varietal || '-',
+          abv: row.ABV || row.abv || '-',
+          servingTemp: row.ServingTemp || row.servingTemp || '-',
+          stockStatus: row.StockStatus || row.stockStatus || 'In Stock',
+          imageUrl: row.ImageUrl || row.imageUrl || '',
+          notes: row.Notes || row.notes || '-',
+          pairing: row.Pairing || row.pairing || '-',
+          storageNote: row.StorageNote || row.storageNote || '-'
+        }));
+
+        const { error } = await supabaseClient.from('wines').insert(formatted);
+        if (!error) {
+          alert(`Berhasil mengimpor ${formatted.length} produk ke Supabase!`);
+          loadAdminData();
+        }
+      };
+      reader.readAsArrayBuffer(file);
+    }
+
+    checkAuthStatus();
+  </script>
+</body>
+</html>
