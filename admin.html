@@ -4,9 +4,14 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Admin Portal - Private Reserve Collection</title>
-  <!-- Supabase & SheetJS SDK -->
+  
+  <!-- SDK Supabase -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- SDK SheetJS (Untuk Import / Baca Excel) -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <!-- SDK ExcelJS (Untuk Export / Download Excel + Gambar) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
+
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
     body { background-color: #070505; color: #e0e0e0; padding-bottom: 2rem; min-height: 100vh; position: relative; overflow-x: hidden; }
@@ -96,7 +101,7 @@
       <p>Kelola data katalog minuman, stok, upload gambar ke Cloud Supabase, dan import file Excel/CSV.</p>
     </div>
 
-    <!-- IMPORT EXCEL -->
+    <!-- IMPORT & EXPORT EXCEL -->
     <div class="admin-card">
       <h2>📂 Import & Export Data (Excel / CSV)</h2>
       <div class="form-grid">
@@ -107,7 +112,6 @@
       </div>
       <div class="btn-group">
         <button type="button" class="btn-gold" onclick="importExcelFile()">📥 Proses & Import Ke Supabase</button>
-        <!-- TOMBOL DOWNLOAD BARU -->
         <button type="button" class="btn-secondary" onclick="exportExcelFile()">📤 Download Keseluruhan Data Excel</button>
       </div>
     </div>
@@ -234,9 +238,13 @@
   </div>
 
   <script>
-    /* ISIKAN DENGAN KREDENSIAL SUPABASE MILIKMU */
+    /* ISIKAN DENGAN KREDENSIAL SUPABASE MILIKMU - PASTIKAN PAKAI const */
     const SUPABASE_URL = "https://gzozsdbtcmmwzogzyeyn.supabase.co";
+    
+    // PENTING: Ganti nilai di bawah ini dengan API Key Anon kamu yang panjang (diawali eyJ...)
     const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd6b3pzZGJ0Y21td3pvZ3p5ZXluIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4ODUxMzE5OSwiZXhwIjoyMTA0MDg5MTk5fQ._cPAvNB04sAP0DvcSfn-DbKubcgGlGlznG8owCIk1X8";
+    
+    // Inisialisasi Supabase
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
     const ADMIN_USER = "admin";
@@ -365,15 +373,21 @@
         return;
       }
 
-      tbody.innerHTML = filtered.map((w) => `
+      tbody.innerHTML = filtered.map((w) => {
+        // Ambil URL gambar dengan aman, menangani variasi penamaan kolom
+        const imgUrl = w.imageUrl || w.image_url || 'https://via.placeholder.com/45';
+        const servingTemp = w.servingTemp || w.serving_temp || '-';
+        const stockStatus = w.stockStatus || w.stock_status || 'In Stock';
+
+        return `
         <tr>
-          <td><img src="${w.imageUrl || 'https://via.placeholder.com/45'}" class="thumb-img" onerror="this.src='https://via.placeholder.com/45'"></td>
+          <td><img src="${imgUrl}" class="thumb-img" onerror="this.src='https://via.placeholder.com/45'"></td>
           <td><strong>${escapeHtml(w.name)}</strong></td>
           <td>${escapeHtml(w.vintage) || '-'}</td>
           <td>${escapeHtml(w.type) || '-'}</td>
           <td>${escapeHtml(w.region) || '-'}</td>
           <td>${escapeHtml(w.abv) || '-'}</td>
-          <td><span style="color:${w.stockStatus && w.stockStatus.includes('Habis') ? '#e53935' : '#4CAF50'}">${escapeHtml(w.stockStatus) || 'In Stock'}</span></td>
+          <td><span style="color:${stockStatus.includes('Habis') ? '#e53935' : '#4CAF50'}">${escapeHtml(stockStatus)}</span></td>
           <td>
             <div class="action-btns">
               <button class="btn-sm-edit" onclick="editWine('${w.id}')">✏️ Edit</button>
@@ -381,7 +395,7 @@
             </div>
           </td>
         </tr>
-      `).join('');
+      `}).join('');
     }
 
     function editWine(id) {
@@ -395,13 +409,16 @@
       document.getElementById('wineRegion').value = w.region || '';
       document.getElementById('wineVarietal').value = w.varietal || '';
       document.getElementById('wineAbv').value = w.abv || '';
-      document.getElementById('wineServingTemp').value = w.servingTemp || '';
-      document.getElementById('wineStockStatus').value = w.stockStatus || 'In Stock';
-      document.getElementById('wineImageUrl').value = w.imageUrl || '';
-      document.getElementById('imgPreview').src = w.imageUrl || 'https://via.placeholder.com/70?text=Preview';
+      document.getElementById('wineServingTemp').value = w.servingTemp || w.serving_temp || '';
+      document.getElementById('wineStockStatus').value = w.stockStatus || w.stock_status || 'In Stock';
+      
+      const imgUrl = w.imageUrl || w.image_url || '';
+      document.getElementById('wineImageUrl').value = imgUrl;
+      document.getElementById('imgPreview').src = imgUrl || 'https://via.placeholder.com/70?text=Preview';
+      
       document.getElementById('wineNotes').value = w.notes || '';
       document.getElementById('winePairing').value = w.pairing || '';
-      document.getElementById('wineStorageNote').value = w.storageNote || '';
+      document.getElementById('wineStorageNote').value = w.storageNote || w.storage_note || '';
 
       document.getElementById('formTitle').innerText = '✏️ Edit Data Minuman';
       document.getElementById('btnSaveWine').innerText = '💾 Update Data Minuman';
@@ -426,6 +443,7 @@
         if (uploadedUrl) imageUrl = uploadedUrl;
       }
 
+      // Supabase biasanya menggunakan snake_case, mari kita buat kompatibel
       const wineData = {
         name: document.getElementById('wineName').value,
         vintage: document.getElementById('wineVintage').value,
@@ -433,12 +451,12 @@
         region: document.getElementById('wineRegion').value,
         varietal: document.getElementById('wineVarietal').value,
         abv: document.getElementById('wineAbv').value,
-        servingTemp: document.getElementById('wineServingTemp').value,
-        stockStatus: document.getElementById('wineStockStatus').value,
-        imageUrl: imageUrl,
+        serving_temp: document.getElementById('wineServingTemp').value,
+        stock_status: document.getElementById('wineStockStatus').value,
+        image_url: imageUrl,
         notes: document.getElementById('wineNotes').value,
         pairing: document.getElementById('winePairing').value,
-        storageNote: document.getElementById('wineStorageNote').value
+        storage_note: document.getElementById('wineStorageNote').value
       };
 
       let res;
@@ -483,24 +501,26 @@
           region: row.Region || row.region || '-',
           varietal: row.Varietal || row.varietal || '-',
           abv: row.ABV || row.abv || '-',
-          servingTemp: row.ServingTemp || row.servingTemp || '-',
-          stockStatus: row.StockStatus || row.stockStatus || 'In Stock',
-          imageUrl: row.ImageUrl || row.imageUrl || '',
+          serving_temp: row.ServingTemp || row.serving_temp || '-',
+          stock_status: row.StockStatus || row.stock_status || 'In Stock',
+          image_url: row.ImageUrl || row.image_url || '',
           notes: row.Notes || row.notes || '-',
           pairing: row.Pairing || row.pairing || '-',
-          storageNote: row.StorageNote || row.storageNote || '-'
+          storage_note: row.StorageNote || row.storage_note || '-'
         }));
 
         const { error } = await supabaseClient.from('wines').insert(formatted);
         if (!error) {
           alert(`Berhasil mengimpor ${formatted.length} produk ke Supabase!`);
           loadAdminData();
+        } else {
+          alert('Gagal Import: ' + error.message);
         }
       };
       reader.readAsArrayBuffer(file);
     }
 
-    /* FUNGSI DOWNLOAD BARU */
+    /* FUNGSI DOWNLOAD EXCEL MENGGUNAKAN EXCELJS (DENGAN STYLING RAPI) */
     async function exportExcelFile() {
       try {
         const { data, error } = await supabaseClient.from('wines').select('*');
@@ -515,17 +535,132 @@
           return;
         }
 
-        const worksheet = XLSX.utils.json_to_sheet(data);
-        const workbook = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(workbook, worksheet, 'Katalog Minuman');
+        alert('Sedang memproses, merapikan tabel, & menempelkan foto. Mohon tunggu sebentar...');
 
-        XLSX.writeFile(workbook, 'Katalog_Minuman_Private_Reserve.xlsx');
+        const workbook = new ExcelJS.Workbook();
+        const worksheet = workbook.addWorksheet('Katalog Minuman');
+
+        // 1. Atur Kolom dan Lebarnya (Dibuat lebih lebar agar lega dan rapi)
+        worksheet.columns = [
+          { header: 'FOTO', key: 'photo', width: 18 },
+          { header: 'NAMA MINUMAN', key: 'name', width: 35 },
+          { header: 'VINTAGE', key: 'vintage', width: 12 },
+          { header: 'KATEGORI', key: 'type', width: 20 },
+          { header: 'WILAYAH', key: 'region', width: 22 },
+          { header: 'VARIETAL', key: 'varietal', width: 22 },
+          { header: 'ABV', key: 'abv', width: 12 },
+          { header: 'SUHU PENYAJIAN', key: 'servingTemp', width: 18 },
+          { header: 'STATUS STOK', key: 'stockStatus', width: 18 },
+          { header: 'TASTING NOTES', key: 'notes', width: 45 },
+          { header: 'FOOD PAIRING', key: 'pairing', width: 35 },
+          { header: 'STORAGE NOTE', key: 'storageNote', width: 25 }
+        ];
+
+        // 2. Styling Header (Baris 1) - Warna Kuning, Bold, dan Tengah
+        const headerRow = worksheet.getRow(1);
+        headerRow.height = 35; // Tinggi header
+        headerRow.eachCell((cell) => {
+          cell.font = { bold: true, color: { argb: 'FF000000' }, size: 12 }; // Teks hitam tebal
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFEA00' } }; // Background Kuning
+          cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
+          cell.border = {
+            top: { style: 'medium', color: { argb: 'FF000000' } },
+            left: { style: 'thin', color: { argb: 'FF000000' } },
+            bottom: { style: 'medium', color: { argb: 'FF000000' } },
+            right: { style: 'thin', color: { argb: 'FF000000' } }
+          };
+        });
+
+        // 3. Loop Data & Tarik Gambar ke Dalam Sel
+        for (let i = 0; i < data.length; i++) {
+          const item = data[i];
+          const rowIndex = i + 2; // Row 1 digunakan untuk Header
+
+          const row = worksheet.addRow({
+            photo: '', // Dikosongkan karena akan ditimpa gambar fisik
+            name: item.name || '-',
+            vintage: item.vintage || '-',
+            type: item.type || '-',
+            region: item.region || '-',
+            varietal: item.varietal || '-',
+            abv: item.abv || '-',
+            servingTemp: item.servingTemp || item.serving_temp || '-',
+            stockStatus: item.stockStatus || item.stock_status || '-',
+            notes: item.notes || '-',
+            pairing: item.pairing || '-',
+            storageNote: item.storageNote || item.storage_note || '-'
+          });
+
+          // Atur Tinggi Baris (Dibuat tinggi agar gambar muat dengan lega)
+          row.height = 100;
+
+          // Styling setiap sel di baris data (Rata tengah vertikal & garis kotak)
+          row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
+            cell.alignment = { 
+              vertical: 'middle', 
+              // Kolom 10 (Notes) & 11 (Pairing) dibuat rata kiri agar enak dibaca, sisanya di tengah
+              horizontal: (colNumber === 10 || colNumber === 11) ? 'left' : 'center', 
+              wrapText: true 
+            };
+            cell.border = {
+              top: { style: 'thin', color: { argb: 'FFB0B0B0' } },
+              left: { style: 'thin', color: { argb: 'FFB0B0B0' } },
+              bottom: { style: 'thin', color: { argb: 'FFB0B0B0' } },
+              right: { style: 'thin', color: { argb: 'FFB0B0B0' } }
+            };
+          });
+
+          // Proses tempel gambar fisik
+          const imgUrl = item.imageUrl || item.image_url;
+          if (imgUrl) {
+            try {
+              const res = await fetch(imgUrl);
+              if (res.ok) {
+                const blob = await res.blob();
+                const arrayBuffer = await blob.arrayBuffer();
+                
+                let ext = 'png';
+                if (imgUrl.toLowerCase().includes('.jpg') || imgUrl.toLowerCase().includes('.jpeg')) {
+                  ext = 'jpeg';
+                }
+
+                const imageId = workbook.addImage({
+                  buffer: arrayBuffer,
+                  extension: ext
+                });
+
+                // Menempatkan gambar dengan padding ke tengah sel
+                worksheet.addImage(imageId, {
+                  tl: { col: 0.15, row: rowIndex - 1 + 0.1 }, // Memberikan offset sedikit agar tidak nabrak garis
+                  ext: { width: 85, height: 110 }, // Ukuran gambar proporsional dengan besar sel
+                  editAs: 'oneCell'
+                });
+              }
+            } catch (err) {
+              console.warn('Gagal mengambil gambar untuk ID ' + item.id + ':', err);
+            }
+          }
+        }
+
+        // 4. Trigger Download File Excel
+        const buffer = await workbook.xlsx.writeBuffer();
+        const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+        
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        // Nama file saat di download
+        link.download = 'Katalog_Minuman_Rapi.xlsx'; 
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
       } catch (err) {
         console.error('Error export file:', err);
         alert('Terjadi kesalahan saat mengunduh file.');
       }
     }
 
+    // Jalankan pengecekan login saat halaman dimuat
     checkAuthStatus();
   </script>
 </body>
