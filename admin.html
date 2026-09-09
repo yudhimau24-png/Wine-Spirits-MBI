@@ -240,7 +240,7 @@
   </div>
 
   <script>
-    /* ISIKAN DENGAN KREDENSIAL SUPABASE MILIKMU */
+    /* ISIKAN DENGAN KREDENSIAL SUPABASE MILIKMU (MENGGUNAKAN KEY JWT YANG PANJANG) */
     const SUPABASE_URL = "https://gzozsdbtcmmwzogzyeyn.supabase.co";
     const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd6b3pzZGJ0Y21td3pvZ3p5ZXluIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4ODUxMzE5OSwiZXhwIjoyMTA0MDg5MTk5fQ._cPAvNB04sAP0DvcSfn-DbKubcgGlGlznG8owCIk1X8";
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -371,15 +371,20 @@
         return;
       }
 
-      tbody.innerHTML = filtered.map((w) => `
+      tbody.innerHTML = filtered.map((w) => {
+        // Handle penamaan kolom camelCase ATAU snake_case dari database
+        const image = w.image_url || w.imageUrl || 'https://via.placeholder.com/45';
+        const stock = w.stock_status || w.stockStatus || 'In Stock';
+        
+        return `
         <tr>
-          <td><img src="${w.imageUrl || 'https://via.placeholder.com/45'}" class="thumb-img" onerror="this.src='https://via.placeholder.com/45'"></td>
+          <td><img src="${image}" class="thumb-img" onerror="this.src='https://via.placeholder.com/45'"></td>
           <td><strong>${escapeHtml(w.name)}</strong></td>
           <td>${escapeHtml(w.vintage) || '-'}</td>
           <td>${escapeHtml(w.type) || '-'}</td>
           <td>${escapeHtml(w.region) || '-'}</td>
           <td>${escapeHtml(w.abv) || '-'}</td>
-          <td><span style="color:${w.stockStatus && w.stockStatus.includes('Habis') ? '#e53935' : '#4CAF50'}">${escapeHtml(w.stockStatus) || 'In Stock'}</span></td>
+          <td><span style="color:${stock.includes('Habis') ? '#e53935' : '#4CAF50'}">${escapeHtml(stock)}</span></td>
           <td>
             <div class="action-btns">
               <button class="btn-sm-edit" onclick="editWine('${w.id}')">✏️ Edit</button>
@@ -387,7 +392,7 @@
             </div>
           </td>
         </tr>
-      `).join('');
+      `}).join('');
     }
 
     function editWine(id) {
@@ -401,13 +406,15 @@
       document.getElementById('wineRegion').value = w.region || '';
       document.getElementById('wineVarietal').value = w.varietal || '';
       document.getElementById('wineAbv').value = w.abv || '';
-      document.getElementById('wineServingTemp').value = w.servingTemp || '';
-      document.getElementById('wineStockStatus').value = w.stockStatus || 'In Stock';
-      document.getElementById('wineImageUrl').value = w.imageUrl || '';
-      document.getElementById('imgPreview').src = w.imageUrl || 'https://via.placeholder.com/70?text=Preview';
+      
+      // Ambil data dengan antisipasi nama kolom snake_case
+      document.getElementById('wineServingTemp').value = w.serving_temp || w.servingTemp || '';
+      document.getElementById('wineStockStatus').value = w.stock_status || w.stockStatus || 'In Stock';
+      document.getElementById('wineImageUrl').value = w.image_url || w.imageUrl || '';
+      document.getElementById('imgPreview').src = w.image_url || w.imageUrl || 'https://via.placeholder.com/70?text=Preview';
       document.getElementById('wineNotes').value = w.notes || '';
       document.getElementById('winePairing').value = w.pairing || '';
-      document.getElementById('wineStorageNote').value = w.storageNote || '';
+      document.getElementById('wineStorageNote').value = w.storage_note || w.storageNote || '';
 
       document.getElementById('formTitle').innerText = '✏️ Edit Data Minuman';
       document.getElementById('btnSaveWine').innerText = '💾 Update Data Minuman';
@@ -425,13 +432,14 @@
     async function saveWine(e) {
       e.preventDefault();
       const id = document.getElementById('wineId').value;
-      let imageUrl = document.getElementById('wineImageUrl').value;
+      let imgFinalUrl = document.getElementById('wineImageUrl').value;
 
       if (selectedFileForUpload) {
         const uploadedUrl = await uploadImageToSupabase(selectedFileForUpload);
-        if (uploadedUrl) imageUrl = uploadedUrl;
+        if (uploadedUrl) imgFinalUrl = uploadedUrl;
       }
 
+      // KUNCI PERBAIKAN: Gunakan snake_case (image_url, serving_temp, dst)
       const wineData = {
         name: document.getElementById('wineName').value,
         vintage: document.getElementById('wineVintage').value,
@@ -439,12 +447,12 @@
         region: document.getElementById('wineRegion').value,
         varietal: document.getElementById('wineVarietal').value,
         abv: document.getElementById('wineAbv').value,
-        servingTemp: document.getElementById('wineServingTemp').value,
-        stockStatus: document.getElementById('wineStockStatus').value,
-        imageUrl: imageUrl,
+        serving_temp: document.getElementById('wineServingTemp').value,
+        stock_status: document.getElementById('wineStockStatus').value,
+        image_url: imgFinalUrl,
         notes: document.getElementById('wineNotes').value,
         pairing: document.getElementById('winePairing').value,
-        storageNote: document.getElementById('wineStorageNote').value
+        storage_note: document.getElementById('wineStorageNote').value
       };
 
       let res;
@@ -472,7 +480,6 @@
       }
     }
 
-    // FUNGSI BARU: Hapus Semua Wine
     async function deleteAllWines() {
       if (!confirm('🚨 PERINGATAN BAHAYA! 🚨\n\nApakah Anda yakin ingin MENGHAPUS SEMUA SKU/DATA MINUMAN dari database?')) return;
       if (!confirm('Tindakan ini TIDAK DAPAT DIBATALKAN. Anda benar-benar yakin?')) return;
@@ -490,7 +497,6 @@
       }
     }
 
-    // FUNGSI BARU: Download Template Excel
     function downloadTemplate() {
       const templateData = [
         {
@@ -506,47 +512,16 @@
           "TASTING NOTES": "-",
           "FOOD PAIRING": "-",
           "STORAGE NOTE": "-"
-        },
-        {
-          "FOTO": "",
-          "NAMA MINUMAN": "ABSOLUT VODKA",
-          "VINTAGE": "NAS",
-          "KATEGORI": "Vodka",
-          "WILAYAH": "Ahus, Sweden",
-          "VARIETAL": "Winter Wheat",
-          "ABV": "40%",
-          "SUHU PENYAJIAN": "Ice Cold (0°C - 4°C)",
-          "STATUS STOK": "-",
-          "TASTING NOTES": "Rich, full-bodied, complex yet smooth and mellow with grain character",
-          "FOOD PAIRING": "Chilled Shot / Vodka Tonic / Cocktail",
-          "STORAGE NOTE": "Continuous Distillation"
         }
       ];
 
       const worksheet = XLSX.utils.json_to_sheet(templateData);
-      
-      worksheet['!cols'] = [
-        { wch: 15 }, // FOTO
-        { wch: 30 }, // NAMA MINUMAN
-        { wch: 10 }, // VINTAGE
-        { wch: 15 }, // KATEGORI
-        { wch: 25 }, // WILAYAH
-        { wch: 25 }, // VARIETAL
-        { wch: 10 }, // ABV
-        { wch: 20 }, // SUHU PENYAJIAN
-        { wch: 15 }, // STATUS STOK
-        { wch: 40 }, // TASTING NOTES
-        { wch: 35 }, // FOOD PAIRING
-        { wch: 25 }  // STORAGE NOTE
-      ];
-
+      worksheet['!cols'] = [{ wch: 15 }, { wch: 30 }, { wch: 10 }, { wch: 15 }, { wch: 25 }, { wch: 25 }, { wch: 10 }, { wch: 20 }, { wch: 15 }, { wch: 40 }, { wch: 35 }, { wch: 25 }];
       const workbook = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(workbook, worksheet, "Template_Katalog");
-      
       XLSX.writeFile(workbook, "Template_Import_Minuman.xlsx");
     }
 
-    // FUNGSI DIPERBARUI: Import Excel dengan Mapping Kolom Bahasa Indonesia
     async function importExcelFile() {
       const file = document.getElementById('excelFileInput').files[0];
       if (!file) return alert('Pilih file dulu!');
@@ -557,22 +532,22 @@
         const workbook = XLSX.read(data, { type: 'array' });
         const jsonData = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
 
+        // KUNCI PERBAIKAN: Gunakan snake_case di sebelah kiri (image_url, serving_temp, dst)
         const formatted = jsonData.map(row => ({
-          imageUrl: row["FOTO"] || '', 
+          image_url: row["FOTO"] || '', 
           name: row["NAMA MINUMAN"] || row.Name || row.name || '',
           vintage: row["VINTAGE"] || row.Vintage || row.vintage || 'NV',
           type: row["KATEGORI"] || row.Type || row.type || 'Red Wine',
           region: row["WILAYAH"] || row.Region || row.region || '-',
           varietal: row["VARIETAL"] || row.Varietal || row.varietal || '-',
           abv: row["ABV"] || row.ABV || row.abv || '-',
-          servingTemp: row["SUHU PENYAJIAN"] || row.ServingTemp || row.servingTemp || '-',
-          stockStatus: row["STATUS STOK"] || row.StockStatus || row.stockStatus || 'In Stock',
+          serving_temp: row["SUHU PENYAJIAN"] || row.ServingTemp || row.servingTemp || '-',
+          stock_status: row["STATUS STOK"] || row.StockStatus || row.stockStatus || 'In Stock',
           notes: row["TASTING NOTES"] || row.Notes || row.notes || '-',
           pairing: row["FOOD PAIRING"] || row.Pairing || row.pairing || '-',
-          storageNote: row["STORAGE NOTE"] || row.StorageNote || row.storageNote || '-'
+          storage_note: row["STORAGE NOTE"] || row.StorageNote || row.storageNote || '-'
         }));
 
-        // Filter data kosong (mencegah impor row blank di akhir Excel)
         const validData = formatted.filter(item => item.name && item.name.trim() !== '');
 
         if (validData.length === 0) return alert('Tidak ada data valid yang ditemukan di file!');
@@ -581,7 +556,7 @@
         
         if (!error) {
           alert(`Berhasil mengimpor ${validData.length} produk ke Supabase!`);
-          document.getElementById('excelFileInput').value = ""; // Reset input
+          document.getElementById('excelFileInput').value = ""; 
           loadAdminData();
         } else {
           alert('Gagal mengimpor: ' + error.message);
