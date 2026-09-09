@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Wine & Spirits Collection</title>
+  <title>Private Reserve Collection</title>
   <!-- Supabase JS SDK -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
@@ -336,8 +336,8 @@
 
   <div id="catalogPage">
     <div class="hero">
-      <h1 id="heroTitle">🍷 Wine & Spirits Collection</h1>
-      <p id="heroSubtitle">Explore our curated collection of wines and spirits.</p>
+      <h1 id="heroTitle">🍷 Private Reserve Collection</h1>
+      <p id="heroSubtitle">Explore our curated collection of fine wines and premium spirits.</p>
     </div>
 
     <div class="controls">
@@ -496,8 +496,14 @@
         return matchesSearch && matchesType;
       });
 
+      // Jika data kosong (karena admin hapus semua atau pencarian tidak ketemu)
       if (currentFilteredWines.length === 0) {
-        grid.innerHTML = '<p style="text-align:center; grid-column: 1/-1; color: #888; padding: 3rem 0;">Belum ada data minuman yang sesuai.</p>';
+        grid.innerHTML = `
+          <div style="grid-column: 1/-1; text-align: center; padding: 5rem 0;">
+            <p style="color: #888; font-size: 1.1rem;">Oops, belum ada koleksi minuman yang tersedia saat ini.</p>
+            <p style="color: #555; font-size: 0.9rem; margin-top: 0.5rem;">Coba ubah kata kunci pencarian atau tunggu admin menambahkan data.</p>
+          </div>
+        `;
         return;
       }
 
@@ -586,7 +592,26 @@
       window.open(`https://wa.me/6281234567890?text=${encodeURIComponent(message)}`, '_blank');
     }
 
+    // 1. Panggil data awal saat halaman dimuat
     fetchWinesFromSupabase();
+
+    // ==========================================
+    // 2. SUPABASE REALTIME SUBSCRIPTION
+    // Menjalankan fungsi fetch ulang otomatis saat ada perubahan di Admin (Insert/Update/Delete)
+    // ==========================================
+    supabaseClient
+      .channel('public:wines')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'wines' },
+        (payload) => {
+          console.log('Perubahan Data dari Admin Terdeteksi:', payload);
+          // Refresh data tanpa perlu reload browser
+          fetchWinesFromSupabase();
+        }
+      )
+      .subscribe();
+
   </script>
 </body>
 </html>
