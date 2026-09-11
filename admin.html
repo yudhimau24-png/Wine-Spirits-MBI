@@ -49,7 +49,6 @@
     .btn-gold:hover { background: linear-gradient(135deg, #e5c065 0%, #c9a042 100%); }
     .btn-secondary { padding: 0.75rem 1.5rem; border-radius: 10px; border: 1px solid rgba(216, 178, 85, 0.3); background: transparent; color: #d8b255; font-weight: 600; cursor: pointer; }
     
-    /* Tombol Danger (Hapus Semua) */
     .btn-danger { padding: 0.75rem 1.5rem; border-radius: 10px; border: none; background: linear-gradient(135deg, #e53935 0%, #b71c1c 100%); color: #fff; font-weight: 800; font-size: 0.9rem; cursor: pointer; }
     .btn-danger:hover { background: linear-gradient(135deg, #ef5350 0%, #c62828 100%); }
 
@@ -209,9 +208,13 @@
     <div class="admin-card">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; flex-wrap:wrap; gap: 1rem;">
         <h2>🍷 Daftar Katalog Minuman</h2>
-        <div style="display:flex; gap: 1rem; align-items:center;">
-          <input type="text" id="adminSearch" style="width:250px;" placeholder="Cari nama / wilayah..." oninput="renderAdminTable()">
-          <button class="btn-danger" onclick="deleteAllWines()">🗑️ Hapus Semua</button>
+        <div style="display:flex; gap: 0.8rem; align-items:center; flex-wrap:wrap;">
+          <input type="text" id="adminSearch" style="width:230px;" placeholder="Cari nama / wilayah..." oninput="renderAdminTable()">
+          
+          <!-- TOMBOL DOWNLOAD PRODUK TERSEDIA -->
+          <button type="button" class="btn-gold" onclick="exportAvailableWinesToExcel()">📊 Download Produk Tersedia</button>
+          
+          <button type="button" class="btn-danger" onclick="deleteAllWines()">🗑️ Hapus Semua</button>
         </div>
       </div>
 
@@ -240,7 +243,6 @@
   </div>
 
   <script>
-    /* ISIKAN DENGAN KREDENSIAL SUPABASE MILIKMU (MENGGUNAKAN KEY JWT YANG PANJANG) */
     const SUPABASE_URL = "https://gzozsdbtcmmwzogzyeyn.supabase.co";
     const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd6b3pzZGJ0Y21td3pvZ3p5ZXluIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4ODUxMzE5OSwiZXhwIjoyMTA0MDg5MTk5fQ._cPAvNB04sAP0DvcSfn-DbKubcgGlGlznG8owCIk1X8";
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -372,7 +374,6 @@
       }
 
       tbody.innerHTML = filtered.map((w) => {
-        // Handle penamaan kolom camelCase ATAU snake_case dari database
         const image = w.image_url || w.imageUrl || 'https://via.placeholder.com/45';
         const stock = w.stock_status || w.stockStatus || 'In Stock';
         
@@ -384,7 +385,7 @@
           <td>${escapeHtml(w.type) || '-'}</td>
           <td>${escapeHtml(w.region) || '-'}</td>
           <td>${escapeHtml(w.abv) || '-'}</td>
-          <td><span style="color:${stock.includes('Habis') ? '#e53935' : '#4CAF50'}">${escapeHtml(stock)}</span></td>
+          <td><span style="color:${stock.toLowerCase().includes('out') || stock.toLowerCase().includes('habis') ? '#e53935' : '#4CAF50'}">${escapeHtml(stock)}</span></td>
           <td>
             <div class="action-btns">
               <button class="btn-sm-edit" onclick="editWine('${w.id}')">✏️ Edit</button>
@@ -406,8 +407,6 @@
       document.getElementById('wineRegion').value = w.region || '';
       document.getElementById('wineVarietal').value = w.varietal || '';
       document.getElementById('wineAbv').value = w.abv || '';
-      
-      // Ambil data dengan antisipasi nama kolom snake_case
       document.getElementById('wineServingTemp').value = w.serving_temp || w.servingTemp || '';
       document.getElementById('wineStockStatus').value = w.stock_status || w.stockStatus || 'In Stock';
       document.getElementById('wineImageUrl').value = w.image_url || w.imageUrl || '';
@@ -439,7 +438,6 @@
         if (uploadedUrl) imgFinalUrl = uploadedUrl;
       }
 
-      // KUNCI PERBAIKAN: Gunakan snake_case (image_url, serving_temp, dst)
       const wineData = {
         name: document.getElementById('wineName').value,
         vintage: document.getElementById('wineVintage').value,
@@ -497,6 +495,53 @@
       }
     }
 
+    /* FUNGSI EKSPOR PRODUK YANG TERSEDIA KE EXCEL */
+    function exportAvailableWinesToExcel() {
+      if (!adminWines || adminWines.length === 0) {
+        alert('Tidak ada data produk di database!');
+        return;
+      }
+
+      // Filter khusus produk yang berstatus tersedia ('In Stock' atau 'Limited Stock')
+      const availableWines = adminWines.filter(w => {
+        const status = (w.stock_status || w.stockStatus || '').toLowerCase();
+        return !status.includes('out of stock') && !status.includes('habis');
+      });
+
+      if (availableWines.length === 0) {
+        alert('Tidak ada produk dengan stok tersedia untuk diunduh!');
+        return;
+      }
+
+      const exportData = availableWines.map(w => ({
+        "FOTO": w.image_url || w.imageUrl || '',
+        "NAMA MINUMAN": w.name || '',
+        "VINTAGE": w.vintage || 'NV',
+        "KATEGORI": w.type || '',
+        "WILAYAH": w.region || '-',
+        "VARIETAL": w.varietal || '-',
+        "ABV": w.abv || '-',
+        "SUHU PENYAJIAN": w.serving_temp || w.servingTemp || '-',
+        "STATUS STOK": w.stock_status || w.stockStatus || 'In Stock',
+        "TASTING NOTES": w.notes || '-',
+        "FOOD PAIRING": w.pairing || '-',
+        "STORAGE NOTE": w.storage_note || w.storageNote || '-'
+      }));
+
+      const worksheet = XLSX.utils.json_to_sheet(exportData);
+      worksheet['!cols'] = [
+        { wch: 25 }, { wch: 32 }, { wch: 10 }, { wch: 18 },
+        { wch: 25 }, { wch: 22 }, { wch: 10 }, { wch: 18 },
+        { wch: 15 }, { wch: 40 }, { wch: 30 }, { wch: 25 }
+      ];
+
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Produk_Tersedia");
+
+      const todayStr = new Date().toISOString().split('T')[0];
+      XLSX.writeFile(workbook, `Produk_Tersedia_Private_Reserve_${todayStr}.xlsx`);
+    }
+
     function downloadTemplate() {
       const templateData = [
         {
@@ -532,7 +577,6 @@
         const workbook = XLSX.read(data, { type: 'array' });
         const jsonData = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
 
-        // KUNCI PERBAIKAN: Gunakan snake_case di sebelah kiri (image_url, serving_temp, dst)
         const formatted = jsonData.map(row => ({
           image_url: row["FOTO"] || '', 
           name: row["NAMA MINUMAN"] || row.Name || row.name || '',
