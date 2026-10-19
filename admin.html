@@ -92,7 +92,7 @@
 
   <div id="loadingModal">
     <div class="spinner"></div>
-    <div id="loadingModalText">Sedang membuat slide PPTX... Harap tunggu sebentar.</div>
+    <div id="loadingModalText">Menyiapkan slide PPTX... Harap tunggu sebentar.</div>
   </div>
 
   <div id="loginOverlay" class="login-overlay">
@@ -523,7 +523,7 @@
     }
 
     /* ========================================================
-       MODUL FACT SHEET PPTX BUILDER (A4 PORTRAIT)
+       MODUL SLIDE BUILDER (THEME: LUXURY EDITORIAL & IVORY GOLD)
        ======================================================== */
     async function convertImageToBase64Safe(url) {
       if (!url || typeof url !== 'string' || !url.trim()) return null;
@@ -545,39 +545,51 @@
 
     async function buildWineSlide(pptx, w) {
       const slide = pptx.addSlide();
-      slide.background = { color: 'FFFFFF' };
+      
+      // 1. Background Warm Ivory & Border Bingkai Ganda Mewah
+      slide.background = { color: 'FBF9F5' };
 
-      const leftMargin = 0.6;
-      const contentWidth = 7.07;
+      // Outer Frame
+      slide.addShape(pptx.shapes.RECTANGLE, {
+        x: 0.35, y: 0.35, w: 7.57, h: 10.99,
+        fill: { type: 'none' },
+        line: { color: 'D8C59A', width: 1 }
+      });
+      // Inner Frame
+      slide.addShape(pptx.shapes.RECTANGLE, {
+        x: 0.42, y: 0.42, w: 7.43, h: 10.85,
+        fill: { type: 'none' },
+        line: { color: 'EFE6D5', width: 0.6 }
+      });
 
-      // Header: Dotted border top & bottom
+      // 2. Header Mewah
       slide.addShape(pptx.shapes.LINE, {
-        x: leftMargin, y: 0.6, w: contentWidth, h: 0,
-        line: { color: 'C9B06B', width: 1.5, dashType: 'dash' }
+        x: 0.7, y: 0.65, w: 6.87, h: 0,
+        line: { color: 'C5A059', width: 1.2, dashType: 'dash' }
       });
 
       slide.addText("GRAPE HEART", {
-        x: leftMargin, y: 0.68, w: 5.0, h: 0.38,
-        fontFace: 'Georgia', fontSize: 22, color: '444444', bold: true
+        x: 0.7, y: 0.72, w: 5.2, h: 0.4,
+        fontFace: 'Georgia', fontSize: 24, color: '4A151B', bold: true
       });
 
-      slide.addText("Vineyards", {
-        x: leftMargin, y: 1.05, w: 5.0, h: 0.32,
-        fontFace: 'Georgia', fontSize: 16, color: 'C9A042', italic: true
+      slide.addText("Private Reserve & Vineyards", {
+        x: 0.7, y: 1.12, w: 5.2, h: 0.3,
+        fontFace: 'Georgia', fontSize: 13, color: 'C5A059', italic: true
       });
 
-      // Gold Emblem Icon (Top Right)
-      slide.addText("❦", {
-        x: 6.8, y: 0.75, w: 0.8, h: 0.6,
-        fontFace: 'Georgia', fontSize: 32, color: 'D8B255', align: 'center'
+      // Crest Ornamen Emas di Sudut Kanan Atas
+      slide.addText("⚜", {
+        x: 6.75, y: 0.75, w: 0.8, h: 0.6,
+        fontFace: 'Georgia', fontSize: 28, color: 'C5A059', align: 'center'
       });
 
       slide.addShape(pptx.shapes.LINE, {
-        x: leftMargin, y: 1.45, w: contentWidth, h: 0,
-        line: { color: 'C9B06B', width: 1.5, dashType: 'dash' }
+        x: 0.7, y: 1.5, w: 6.87, h: 0,
+        line: { color: 'C5A059', width: 1.2, dashType: 'dash' }
       });
 
-      // Data normalization
+      // 3. Normalisasi Data
       const name = (w.name || 'EXCLUSIVE VINTAGE').toUpperCase();
       const vintage = w.vintage || 'NV';
       const region = w.region || 'Suisun Valley, North Coast, AVA';
@@ -593,112 +605,149 @@
       const pairing = (w.pairing && w.pairing !== '-') ? w.pairing : 'Prime Ribeye, Braised Lamb Shank, Aged Cheeses';
       const storage = (w.storage_note && w.storage_note !== '-') ? w.storage_note : 'Store horizontally in a cool, temperature-controlled environment away from direct sunlight.';
 
-      // Gambar Botol (Sisi Kiri)
+      // 4. Pedestal & Foto Botol (Kolom Kiri)
+      // Backdrop Pedestal Halus
+      slide.addShape(pptx.shapes.ROUNDED_RECTANGLE, {
+        x: 0.7, y: 1.75, w: 2.7, h: 8.65,
+        fill: { color: 'F4EFE6' },
+        line: { color: 'E5DAC7', width: 0.8 }
+      });
+
       const base64Img = await convertImageToBase64Safe(rawImgUrl);
       if (base64Img) {
         slide.addImage({
           data: base64Img,
-          x: leftMargin, y: 1.8, w: 2.7, h: 8.5,
-          sizing: { type: 'contain', w: 2.7, h: 8.5 }
+          x: 0.8, y: 1.95, w: 2.5, h: 8.25,
+          sizing: { type: 'contain', w: 2.5, h: 8.25 }
         });
       } else {
-        // Placeholder botol minimalis jika tidak ada foto
-        slide.addShape(pptx.shapes.ROUNDED_RECTANGLE, {
-          x: leftMargin + 0.35, y: 2.4, w: 2.0, h: 7.2,
-          fill: { color: 'F5F3EF' }, line: { color: 'D8B255', width: 1, dashType: 'dash' }
-        });
-        slide.addText("FOTO BOTOL\nTIDAK TERSEDIA", {
-          x: leftMargin + 0.35, y: 5.5, w: 2.0, h: 0.8,
-          fontFace: 'Calibri', fontSize: 9, color: '999999', align: 'center'
+        slide.addText("BOTOL FOTO\nBELUM ADA", {
+          x: 0.8, y: 5.6, w: 2.5, h: 0.8,
+          fontFace: 'Calibri', fontSize: 9, color: 'B0A492', align: 'center', bold: true
         });
       }
 
-      // Metadata Spesifikasi (Sisi Kanan)
-      const colX = 3.6;
-      const colW = 4.07;
+      // 5. Metadata & Spesifikasi (Kolom Kanan)
+      const colX = 3.65;
+      const colW = 3.92;
 
-      slide.addText(`${vintage} ${name}`, {
-        x: colX, y: 1.8, w: colW, h: 0.55,
-        fontFace: 'Georgia', fontSize: 16, bold: true, color: '2A2A2A'
+      // Badge Vintage & Tipe
+      slide.addShape(pptx.shapes.ROUNDED_RECTANGLE, {
+        x: colX, y: 1.75, w: 2.2, h: 0.28,
+        fill: { color: '4A151B' },
+        line: { type: 'none' }
+      });
+      slide.addText(`${vintage} • ${type.toUpperCase()}`, {
+        x: colX, y: 1.76, w: 2.2, h: 0.26,
+        fontFace: 'Calibri', fontSize: 8.5, bold: true, color: 'FFFFFF', align: 'center'
       });
 
-      function addSpecField(slide, label, value, x, y, w) {
+      // Judul Nama Minuman
+      slide.addText(name, {
+        x: colX, y: 2.1, w: colW, h: 0.55,
+        fontFace: 'Georgia', fontSize: 16, bold: true, color: '242121'
+      });
+
+      // Grid Cards Spesifikasi
+      function addSpecCard(x, y, w, h, label, value) {
+        slide.addShape(pptx.shapes.ROUNDED_RECTANGLE, {
+          x: x, y: y, w: w, h: h,
+          fill: { color: 'FFFFFF' },
+          line: { color: 'E8DEC9', width: 0.8 }
+        });
         slide.addText(label.toUpperCase(), {
-          x: x, y: y, w: w, h: 0.18,
-          fontFace: 'Calibri', fontSize: 8.5, bold: true, color: '666666'
+          x: x + 0.1, y: y + 0.06, w: w - 0.2, h: 0.16,
+          fontFace: 'Calibri', fontSize: 7.5, bold: true, color: '9E7D3B'
         });
         slide.addText(value, {
-          x: x, y: y + 0.19, w: w, h: 0.38,
-          fontFace: 'Georgia', fontSize: 11, color: '1A1A1A'
+          x: x + 0.1, y: y + 0.22, w: w - 0.2, h: 0.32,
+          fontFace: 'Georgia', fontSize: 10, color: '201F1F', bold: true
         });
       }
 
+      const cardW = 1.9;
+      const cardH = 0.58;
       const col1X = colX;
-      const col2X = colX + 2.1;
-      const subW = 1.95;
+      const col2X = colX + 2.02;
 
-      addSpecField(slide, 'Appellation', region, col1X, 2.5, subW);
-      addSpecField(slide, 'Harvest Date', vintage, col2X, 2.5, subW);
+      addSpecCard(col1X, 2.75, cardW, cardH, 'Appellation / Wilayah', region);
+      addSpecCard(col2X, 2.75, cardW, cardH, 'Harvest Date', vintage);
 
-      addSpecField(slide, 'Varietal', varietal, col1X, 3.2, subW);
-      addSpecField(slide, 'Alcohol', abv, col2X, 3.2, subW);
+      addSpecCard(col1X, 3.42, cardW, cardH, 'Varietal / Grape', varietal);
+      addSpecCard(col2X, 3.42, cardW, cardH, 'Alcohol (ABV)', abv);
 
-      addSpecField(slide, 'Wine Type', type, col1X, 3.9, subW);
-      addSpecField(slide, 'Bottle Size', '750 ml', col2X, 3.9, subW);
+      addSpecCard(col1X, 4.09, cardW, cardH, 'Wine Type', type);
+      addSpecCard(col2X, 4.09, cardW, cardH, 'Bottle Size', '750 ml');
 
-      addSpecField(slide, 'Serving Temp', servingTemp, col1X, 4.6, subW);
-      addSpecField(slide, 'Stock Status', stock, col2X, 4.6, subW);
+      addSpecCard(col1X, 4.76, cardW, cardH, 'Serving Temperature', servingTemp);
+      addSpecCard(col2X, 4.76, cardW, cardH, 'Stock Status', stock);
 
-      // Garis Pembatas Putus-putus
-      slide.addShape(pptx.shapes.LINE, {
-        x: colX, y: 5.4, w: colW, h: 0,
-        line: { color: 'D0C4A4', width: 1, dashType: 'dash' }
+      // Section: About This Wine Card
+      slide.addShape(pptx.shapes.ROUNDED_RECTANGLE, {
+        x: colX, y: 5.5, w: colW, h: 2.1,
+        fill: { color: 'FAF7F2' },
+        line: { color: 'E5DAC7', width: 0.8 }
+      });
+      // Gold left accent line
+      slide.addShape(pptx.shapes.RECTANGLE, {
+        x: colX, y: 5.5, w: 0.08, h: 2.1,
+        fill: { color: 'C5A059' }, line: { type: 'none' }
       });
 
-      // Section: About This Wine
-      slide.addText("ABOUT THIS WINE:", {
-        x: colX, y: 5.65, w: colW, h: 0.22,
-        fontFace: 'Calibri', fontSize: 9, bold: true, color: '555555'
+      slide.addText("ABOUT THIS WINE", {
+        x: colX + 0.18, y: 5.62, w: colW - 0.3, h: 0.2,
+        fontFace: 'Calibri', fontSize: 8.5, bold: true, color: '4A151B'
       });
       slide.addText(notes, {
-        x: colX, y: 5.9, w: colW, h: 1.7,
-        fontFace: 'Georgia', fontSize: 10, color: '333333',
-        align: 'justify', lineSpacingMultiple: 1.25
+        x: colX + 0.18, y: 5.86, w: colW - 0.3, h: 1.65,
+        fontFace: 'Georgia', fontSize: 9.5, color: '333030',
+        align: 'justify', lineSpacingMultiple: 1.2
       });
 
-      // Section: Tasting & Food Pairing
-      slide.addText("TASTING NOTES:", {
-        x: colX, y: 7.75, w: colW, h: 0.22,
-        fontFace: 'Calibri', fontSize: 9, bold: true, color: '555555'
+      // Section: Tasting & Food Pairing Card
+      slide.addShape(pptx.shapes.ROUNDED_RECTANGLE, {
+        x: colX, y: 7.75, w: colW, h: 2.65,
+        fill: { color: 'FAF7F2' },
+        line: { color: 'E5DAC7', width: 0.8 }
+      });
+      // Burgundy left accent line
+      slide.addShape(pptx.shapes.RECTANGLE, {
+        x: colX, y: 7.75, w: 0.08, h: 2.65,
+        fill: { color: '4A151B' }, line: { type: 'none' }
+      });
+
+      slide.addText("TASTING & SOMMELIER NOTES", {
+        x: colX + 0.18, y: 7.88, w: colW - 0.3, h: 0.2,
+        fontFace: 'Calibri', fontSize: 8.5, bold: true, color: '4A151B'
       });
 
       slide.addText([
-        { text: "FOOD PAIRING: ", options: { bold: true, color: '555555', fontSize: 9 } },
-        { text: pairing + "\n\n", options: { color: '333333', fontSize: 9.5 } },
-        { text: "STORAGE: ", options: { bold: true, color: '555555', fontSize: 9 } },
-        { text: storage, options: { color: '333333', fontSize: 9.5 } }
+        { text: "FOOD PAIRING:\n", options: { bold: true, color: '9E7D3B', fontSize: 8.5 } },
+        { text: pairing + "\n\n", options: { color: '2B2727', fontSize: 9.5 } },
+        { text: "STORAGE RECOMMENDATION:\n", options: { bold: true, color: '9E7D3B', fontSize: 8.5 } },
+        { text: storage, options: { color: '2B2727', fontSize: 9.5 } }
       ], {
-        x: colX, y: 8.02, w: colW, h: 2.2,
-        fontFace: 'Georgia', lineSpacingMultiple: 1.2
+        x: colX + 0.18, y: 8.12, w: colW - 0.3, h: 2.2,
+        fontFace: 'Georgia', lineSpacingMultiple: 1.15
       });
 
-      // Footer
+      // 6. Footer Mewah
       slide.addShape(pptx.shapes.LINE, {
-        x: leftMargin, y: 10.8, w: contentWidth, h: 0,
-        line: { color: 'EEEEEE', width: 0.8 }
+        x: 0.7, y: 10.65, w: 6.87, h: 0,
+        line: { color: 'D8C59A', width: 0.8 }
       });
 
       slide.addText("PRIVATE RESERVE COLLECTION", {
-        x: leftMargin, y: 10.9, w: 2.5, h: 0.3,
-        fontFace: 'Calibri', fontSize: 8, color: '888888'
+        x: 0.7, y: 10.75, w: 2.3, h: 0.25,
+        fontFace: 'Calibri', fontSize: 7.5, color: '8E8474', bold: true
       });
       slide.addText("ESTATE GROWN & CELLAR BOTTLED", {
-        x: 2.8, y: 10.9, w: 2.6, h: 0.3,
-        fontFace: 'Calibri', fontSize: 8, color: '888888', align: 'center'
+        x: 3.0, y: 10.75, w: 2.3, h: 0.25,
+        fontFace: 'Calibri', fontSize: 7.5, color: '8E8474', align: 'center', bold: true
       });
       slide.addText("© MITRA BUANA INTIMAS", {
-        x: 5.2, y: 10.9, w: 2.47, h: 0.3,
-        fontFace: 'Calibri', fontSize: 8, color: '888888', align: 'right'
+        x: 5.3, y: 10.75, w: 2.27, h: 0.25,
+        fontFace: 'Calibri', fontSize: 7.5, color: '8E8474', align: 'right', bold: true
       });
     }
 
@@ -709,7 +758,7 @@
 
       const modal = document.getElementById('loadingModal');
       const modalText = document.getElementById('loadingModalText');
-      modalText.innerText = `Menghasilkan PowerPoint untuk "${w.name}"...`;
+      modalText.innerText = `Membuat Fact Sheet mewah untuk "${w.name}"...`;
       modal.style.display = 'flex';
 
       try {
@@ -737,7 +786,7 @@
 
       const modal = document.getElementById('loadingModal');
       const modalText = document.getElementById('loadingModalText');
-      modalText.innerText = `Sedang menyusun ${adminWines.length} produk ke dalam slide PowerPoint... Harap tunggu sebentar.`;
+      modalText.innerText = `Menyusun ${adminWines.length} produk ke dalam slide PowerPoint... Harap tunggu sebentar.`;
       modal.style.display = 'flex';
 
       try {
@@ -746,7 +795,7 @@
         pptx.layout = 'A4_PORTRAIT';
 
         for (let i = 0; i < adminWines.length; i++) {
-          modalText.innerText = `Memproses produk (${i + 1}/${adminWines.length}): ${adminWines[i].name || 'Wine'}...`;
+          modalText.innerText = `Memproses slide (${i + 1}/${adminWines.length}): ${adminWines[i].name || 'Wine'}...`;
           await buildWineSlide(pptx, adminWines[i]);
         }
 
