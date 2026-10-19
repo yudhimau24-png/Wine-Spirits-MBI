@@ -4,10 +4,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Admin Portal - Private Reserve Collection</title>
-  <!-- Supabase, SheetJS & html2pdf SDK -->
+  <!-- Supabase, SheetJS & PptxGenJS SDK -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
     body { background-color: #070505; color: #e0e0e0; padding-bottom: 2rem; min-height: 100vh; position: relative; overflow-x: hidden; }
@@ -66,16 +66,16 @@
     .action-btns { display: flex; gap: 0.4rem; flex-wrap: wrap; }
     .btn-sm-edit { padding: 0.4rem 0.8rem; border-radius: 6px; border: 1px solid #d8b255; background: transparent; color: #d8b255; cursor: pointer; font-size: 0.8rem; }
     .btn-sm-del { padding: 0.4rem 0.8rem; border-radius: 6px; border: 1px solid #e53935; background: transparent; color: #e53935; cursor: pointer; font-size: 0.8rem; }
-    .btn-sm-sheet { padding: 0.4rem 0.8rem; border-radius: 6px; border: 1px solid #c9a042; background: rgba(216, 178, 85, 0.12); color: #e5c065; cursor: pointer; font-weight: 600; font-size: 0.8rem; }
-    .btn-sm-sheet:hover { background: #d8b255; color: #000; }
+    .btn-sm-ppt { padding: 0.4rem 0.8rem; border-radius: 6px; border: 1px solid #c9a042; background: rgba(216, 178, 85, 0.15); color: #e5c065; cursor: pointer; font-weight: 700; font-size: 0.8rem; }
+    .btn-sm-ppt:hover { background: #d8b255; color: #000; }
 
     footer { text-align: center; padding: 2.5rem 1rem 1rem; margin-top: 3rem; border-top: 1px solid rgba(216, 178, 85, 0.15); color: #776666; font-size: 0.85rem; }
     footer strong { color: #d8b255; }
 
-    /* LOADING MODAL UNTUK EXPORT PDF */
-    #pdfLoadingModal {
-      position: fixed; inset: 0; background: rgba(0, 0, 0, 0.95);
-      z-index: 99999; display: none; /* Sembunyikan default */
+    /* LOADING MODAL */
+    #loadingModal {
+      position: fixed; inset: 0; background: rgba(0, 0, 0, 0.85);
+      backdrop-filter: blur(8px); z-index: 20000; display: none;
       align-items: center; justify-content: center; flex-direction: column; gap: 1rem; color: #d8b255; font-size: 1.1rem;
     }
     .spinner {
@@ -84,202 +84,16 @@
       animation: spin 0.8s linear infinite;
     }
     @keyframes spin { to { transform: rotate(360deg); } }
-
-    /* =======================================================
-       PERBAIKAN: TEMPLATE FACT SHEET (PRINT & PDF ENGINE) 
-       ======================================================= */
-    /* Container untuk render ditaruh di pojok kiri atas tapi tertutup z-index */
-    #factSheetPrintArea {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 210mm;
-      z-index: -100; /* Tetap berada di layer bawah body, agar tidak menutupi UI */
-      background: #ffffff;
-      opacity: 0.01; /* Dibuat hampir transparan agar tidak mengganggu mata, tapi tetap dirender oleh browser */
-      pointer-events: none; /* Supaya tidak bisa diklik */
-    }
-
-    .fact-sheet-page {
-      width: 210mm;
-      height: 297mm;
-      box-sizing: border-box;
-      padding: 16mm 18mm 12mm 18mm;
-      background: #ffffff;
-      color: #333333;
-      font-family: 'Georgia', serif;
-      position: relative;
-      overflow: hidden;
-      page-break-after: always;
-    }
-
-    .fact-sheet-page:last-child {
-      page-break-after: auto;
-    }
-
-    .fs-header {
-      border-top: 1.5px dotted #c9b06b;
-      border-bottom: 1.5px dotted #c9b06b;
-      padding: 14px 10px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 28px;
-    }
-
-    .fs-brand-title {
-      font-size: 26px;
-      letter-spacing: 2.5px;
-      color: #555555;
-      text-transform: uppercase;
-      font-family: 'Georgia', serif;
-      font-weight: 500;
-      line-height: 1;
-    }
-
-    .fs-brand-subtitle {
-      font-size: 19px;
-      color: #c9a042;
-      font-style: italic;
-      font-family: 'Baskerville', 'Georgia', cursive;
-      margin-top: 4px;
-      letter-spacing: 1px;
-    }
-
-    .fs-body {
-      display: flex;
-      gap: 26px;
-      height: calc(100% - 130px);
-    }
-
-    .fs-bottle-col {
-      width: 38%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 10px 0;
-    }
-
-    .fs-bottle-img {
-      max-width: 100%;
-      max-height: 570px;
-      object-fit: contain;
-      filter: drop-shadow(0 14px 20px rgba(0,0,0,0.22));
-    }
-
-    .fs-info-col {
-      width: 62%;
-      display: flex;
-      flex-direction: column;
-      padding-top: 5px;
-    }
-
-    .fs-wine-title {
-      font-size: 20px;
-      letter-spacing: 2px;
-      color: #3a3a3a;
-      text-transform: uppercase;
-      font-weight: normal;
-      margin-bottom: 22px;
-    }
-
-    .fs-specs-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 14px 18px;
-    }
-
-    .fs-spec-item {
-      display: flex;
-      flex-direction: column;
-    }
-
-    .fs-spec-label {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      font-size: 9.5px;
-      font-weight: 700;
-      letter-spacing: 1px;
-      color: #666666;
-      text-transform: uppercase;
-      margin-bottom: 3px;
-    }
-
-    .fs-spec-value {
-      font-size: 13px;
-      color: #1f1f1f;
-      line-height: 1.35;
-      font-family: 'Georgia', serif;
-    }
-
-    .fs-divider {
-      border-bottom: 1.5px dotted #d0c4a4;
-      margin: 24px 0 20px 0;
-      width: 100%;
-    }
-
-    .fs-section-title {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      font-size: 10px;
-      font-weight: 700;
-      letter-spacing: 1.2px;
-      color: #555555;
-      text-transform: uppercase;
-      margin-bottom: 7px;
-    }
-
-    .fs-section-desc {
-      font-size: 11.5px;
-      line-height: 1.6;
-      color: #333333;
-      text-align: justify;
-      margin-bottom: 18px;
-    }
-
-    .fs-tasting-row {
-      font-size: 11.5px;
-      line-height: 1.55;
-      color: #333333;
-      margin-bottom: 6px;
-    }
-
-    .fs-tasting-row strong {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      font-size: 9.5px;
-      letter-spacing: 0.8px;
-      color: #555555;
-      text-transform: uppercase;
-    }
-
-    .fs-footer {
-      position: absolute;
-      bottom: 10mm;
-      left: 18mm;
-      right: 18mm;
-      border-top: 1px solid #eeeeee;
-      padding-top: 8px;
-      display: flex;
-      justify-content: space-between;
-      font-size: 9px;
-      color: #888888;
-      letter-spacing: 1px;
-      text-transform: uppercase;
-      font-family: -apple-system, sans-serif;
-    }
   </style>
 </head>
 <body>
 
   <canvas id="bgCanvas"></canvas>
 
-  <!-- LOADING OVERLAY SAAT RENDER PDF -->
-  <div id="pdfLoadingModal">
+  <div id="loadingModal">
     <div class="spinner"></div>
-    <div id="pdfLoadingText">Sedang membuat Fact Sheet PDF... Harap tunggu sebentar.</div>
+    <div id="loadingModalText">Sedang membuat slide PPTX... Harap tunggu sebentar.</div>
   </div>
-
-  <!-- CONTAINER RENDER UNTUK FACT SHEET -->
-  <!-- Ditempatkan di posisi absolut tanpa left: -9999px agar html2canvas bisa merendernya -->
-  <div id="factSheetPrintArea"></div>
 
   <div id="loginOverlay" class="login-overlay">
     <div class="login-card">
@@ -419,8 +233,8 @@
         <div style="display:flex; gap: 0.8rem; align-items:center; flex-wrap:wrap;">
           <input type="text" id="adminSearch" style="width:210px;" placeholder="Cari nama / wilayah..." oninput="renderAdminTable()">
           
-          <!-- TOMBOL DOWNLOAD SEMUA FACT SHEET SEKALIGUS -->
-          <button type="button" class="btn-gold" onclick="downloadAllFactSheets()">📑 Download Semua Fact Sheet (PDF)</button>
+          <!-- TOMBOL DOWNLOAD PPTX SEMUA SEKALIGUS -->
+          <button type="button" class="btn-gold" onclick="downloadAllWinesPPT()">📑 Download Semua Fact Sheet (PPTX)</button>
           
           <!-- TOMBOL DOWNLOAD EXCEL -->
           <button type="button" class="btn-secondary" onclick="exportAvailableWinesToExcel()">📊 Download Excel Tersedia</button>
@@ -599,8 +413,8 @@
           <td><span style="color:${stock.toLowerCase().includes('out') || stock.toLowerCase().includes('habis') ? '#e53935' : '#4CAF50'}">${escapeHtml(stock)}</span></td>
           <td>
             <div class="action-btns">
-              <!-- TOMBOL DOWNLOAD SATUAN PER PRODUK -->
-              <button class="btn-sm-sheet" onclick="downloadSingleFactSheet('${w.id}')" title="Download Fact Sheet PDF">📄 Sheet</button>
+              <!-- TOMBOL DOWNLOAD PPT SATUAN -->
+              <button class="btn-sm-ppt" onclick="downloadSingleWinePPT('${w.id}')" title="Download Fact Sheet PowerPoint">📊 PPT</button>
               <button class="btn-sm-edit" onclick="editWine('${w.id}')">✏️ Edit</button>
               <button class="btn-sm-del" onclick="deleteWine('${w.id}')">🗑️ Hapus</button>
             </div>
@@ -709,11 +523,61 @@
     }
 
     /* ========================================================
-       MODUL FACT SHEET BUILDER & PDF DOWNLOAD (DIPERBAIKI)
+       MODUL FACT SHEET PPTX BUILDER (A4 PORTRAIT)
        ======================================================== */
-    const DEFAULT_BOTTLE_SVG = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 560" width="160" height="560"><path d="M68,10 L92,10 L92,30 L98,38 L98,140 C125,185 145,235 145,310 L145,520 C145,540 135,550 115,550 L45,550 C25,550 15,540 15,520 L15,310 C15,235 35,185 62,140 L62,38 L68,30 Z" fill="%231a1a1a" stroke="%23333333" stroke-width="3"/><rect x="25" y="270" width="110" height="150" fill="%232b2b2b" rx="4"/><rect x="35" y="295" width="90" height="100" fill="%23f7f4ec" rx="2"/><path d="M68,10 L92,10 L92,60 L68,60 Z" fill="%23d8b255"/></svg>`;
+    async function convertImageToBase64Safe(url) {
+      if (!url || typeof url !== 'string' || !url.trim()) return null;
+      if (url.startsWith('data:image')) return url;
+      try {
+        const res = await fetch(url, { mode: 'cors' });
+        if (!res.ok) return null;
+        const blob = await res.blob();
+        return new Promise((resolve) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result);
+          reader.onerror = () => resolve(null);
+          reader.readAsDataURL(blob);
+        });
+      } catch (e) {
+        return null;
+      }
+    }
 
-    function createFactSheetHTML(w) {
+    async function buildWineSlide(pptx, w) {
+      const slide = pptx.addSlide();
+      slide.background = { color: 'FFFFFF' };
+
+      const leftMargin = 0.6;
+      const contentWidth = 7.07;
+
+      // Header: Dotted border top & bottom
+      slide.addShape(pptx.shapes.LINE, {
+        x: leftMargin, y: 0.6, w: contentWidth, h: 0,
+        line: { color: 'C9B06B', width: 1.5, dashType: 'dash' }
+      });
+
+      slide.addText("GRAPE HEART", {
+        x: leftMargin, y: 0.68, w: 5.0, h: 0.38,
+        fontFace: 'Georgia', fontSize: 22, color: '444444', bold: true
+      });
+
+      slide.addText("Vineyards", {
+        x: leftMargin, y: 1.05, w: 5.0, h: 0.32,
+        fontFace: 'Georgia', fontSize: 16, color: 'C9A042', italic: true
+      });
+
+      // Gold Emblem Icon (Top Right)
+      slide.addText("❦", {
+        x: 6.8, y: 0.75, w: 0.8, h: 0.6,
+        fontFace: 'Georgia', fontSize: 32, color: 'D8B255', align: 'center'
+      });
+
+      slide.addShape(pptx.shapes.LINE, {
+        x: leftMargin, y: 1.45, w: contentWidth, h: 0,
+        line: { color: 'C9B06B', width: 1.5, dashType: 'dash' }
+      });
+
+      // Data normalization
       const name = (w.name || 'EXCLUSIVE VINTAGE').toUpperCase();
       const vintage = w.vintage || 'NV';
       const region = w.region || 'Suisun Valley, North Coast, AVA';
@@ -722,179 +586,178 @@
       const abv = w.abv || '14.5%';
       const servingTemp = w.serving_temp || w.servingTemp || '16°C - 18°C';
       const stock = w.stock_status || w.stockStatus || 'In Stock';
-      const img = w.image_url || w.imageUrl || DEFAULT_BOTTLE_SVG;
-      const notes = w.notes && w.notes.trim() !== '' && w.notes !== '-' ? w.notes : 'This wine offers an elegant structure with smooth and round tannins that expand into a lingering finish, showcasing depth and purity crafted from pristine estate harvests.';
-      const pairing = w.pairing && w.pairing !== '-' ? w.pairing : 'Prime Ribeye, Braised Lamb Shank, Aged Cheeses';
-      const storage = w.storage_note && w.storage_note !== '-' ? w.storage_note : 'Store horizontally in a cool, temperature-controlled environment away from direct sunlight.';
+      const rawImgUrl = w.image_url || w.imageUrl || '';
+      const notes = (w.notes && w.notes.trim() !== '' && w.notes !== '-') 
+        ? w.notes 
+        : 'This wine offers an elegant structure with smooth and round tannins that expand into a lingering finish, showcasing depth and purity crafted from pristine estate harvests.';
+      const pairing = (w.pairing && w.pairing !== '-') ? w.pairing : 'Prime Ribeye, Braised Lamb Shank, Aged Cheeses';
+      const storage = (w.storage_note && w.storage_note !== '-') ? w.storage_note : 'Store horizontally in a cool, temperature-controlled environment away from direct sunlight.';
 
-      return `
-        <div class="fact-sheet-page">
-          <!-- HEADER WITH DOTTED BORDER & GOLD CREST -->
-          <div class="fs-header">
-            <div>
-              <div class="fs-brand-title">GRAPE HEART</div>
-              <div class="fs-brand-subtitle">Vineyards</div>
-            </div>
-            <div>
-              <!-- Gold Heart Grape Crest SVG -->
-              <svg width="60" height="60" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M50 88C35 73 18 56 18 36C18 22 28 14 40 14C45.5 14 50 17 50 17C50 17 54.5 14 60 14C72 14 82 22 82 36C82 56 65 73 50 88Z" stroke="#d8b255" stroke-width="2.5" fill="none" stroke-dasharray="3 3"/>
-                <circle cx="50" cy="40" r="5" fill="#d8b255"/>
-                <circle cx="43" cy="48" r="5" fill="#e5c065"/>
-                <circle cx="57" cy="48" r="5" fill="#b89235"/>
-                <circle cx="50" cy="56" r="4.5" fill="#d8b255"/>
-                <circle cx="44" cy="63" r="3.5" fill="#e5c065"/>
-                <circle cx="56" cy="63" r="3.5" fill="#b89235"/>
-                <circle cx="50" cy="70" r="3" fill="#d8b255"/>
-                <path d="M50 35 Q53 25 60 22 Q53 28 50 35" fill="#d8b255"/>
-              </svg>
-            </div>
-          </div>
-
-          <!-- BODY SECTION: BOTTLE LEFT, METADATA RIGHT -->
-          <div class="fs-body">
-            <div class="fs-bottle-col">
-              <img src="${img}" class="fs-bottle-img" crossorigin="anonymous" onerror="this.src='${DEFAULT_BOTTLE_SVG}'">
-            </div>
-
-            <div class="fs-info-col">
-              <div class="fs-wine-title">${escapeHtml(vintage)} ${escapeHtml(name)}</div>
-
-              <div class="fs-specs-grid">
-                <div class="fs-spec-item">
-                  <span class="fs-spec-label">APPELLATION</span>
-                  <span class="fs-spec-value">${escapeHtml(region)}</span>
-                </div>
-                <div class="fs-spec-item">
-                  <span class="fs-spec-label">HARVEST DATE</span>
-                  <span class="fs-spec-value">${escapeHtml(vintage)}</span>
-                </div>
-                <div class="fs-spec-item">
-                  <span class="fs-spec-label">VARIETAL</span>
-                  <span class="fs-spec-value">${escapeHtml(varietal)}</span>
-                </div>
-                <div class="fs-spec-item">
-                  <span class="fs-spec-label">ALCOHOL</span>
-                  <span class="fs-spec-value">${escapeHtml(abv)}</span>
-                </div>
-                <div class="fs-spec-item">
-                  <span class="fs-spec-label">WINE TYPE</span>
-                  <span class="fs-spec-value">${escapeHtml(type)}</span>
-                </div>
-                <div class="fs-spec-item">
-                  <span class="fs-spec-label">BOTTLE SIZE</span>
-                  <span class="fs-spec-value">750 ml</span>
-                </div>
-                <div class="fs-spec-item">
-                  <span class="fs-spec-label">SERVING TEMP</span>
-                  <span class="fs-spec-value">${escapeHtml(servingTemp)}</span>
-                </div>
-                <div class="fs-spec-item">
-                  <span class="fs-spec-label">STOCK STATUS</span>
-                  <span class="fs-spec-value">${escapeHtml(stock)}</span>
-                </div>
-              </div>
-
-              <div class="fs-divider"></div>
-
-              <div>
-                <div class="fs-section-title">ABOUT THIS WINE:</div>
-                <div class="fs-section-desc">${escapeHtml(notes)}</div>
-              </div>
-
-              <div>
-                <div class="fs-section-title">TASTING NOTES:</div>
-                <div class="fs-tasting-row">
-                  <strong>FOOD PAIRING:</strong> ${escapeHtml(pairing)}
-                </div>
-                <div class="fs-tasting-row">
-                  <strong>STORAGE:</strong> ${escapeHtml(storage)}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- FOOTER -->
-          <div class="fs-footer">
-            <span>Private Reserve Collection</span>
-            <span>Estate Grown & Cellar Bottled</span>
-            <span>&copy; Mitra Buana Intimas</span>
-          </div>
-        </div>
-      `;
-    }
-
-    async function processPDF(printArea, filename) {
-      // Pastikan opacity dinaikkan sedikit khusus saat dirender agar html2canvas bisa membacanya 
-      // (meski tetap tersembunyi oleh modal yang z-indexnya lebih tinggi)
-      printArea.style.opacity = '1';
-      
-      const opt = {
-        margin: 0,
-        filename: filename,
-        image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true, logging: false },
-        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-        pagebreak: { mode: ['css', 'legacy'] }
-      };
-
-      try {
-        await html2pdf().set(opt).from(printArea).save();
-      } catch (err) {
-        console.error(err);
-        alert('Terjadi kesalahan saat membuat PDF: ' + err.message);
-      } finally {
-        // Kembalikan ke tidak terlihat setelah render selesai
-        printArea.style.opacity = '0.01';
-        printArea.innerHTML = '';
+      // Gambar Botol (Sisi Kiri)
+      const base64Img = await convertImageToBase64Safe(rawImgUrl);
+      if (base64Img) {
+        slide.addImage({
+          data: base64Img,
+          x: leftMargin, y: 1.8, w: 2.7, h: 8.5,
+          sizing: { type: 'contain', w: 2.7, h: 8.5 }
+        });
+      } else {
+        // Placeholder botol minimalis jika tidak ada foto
+        slide.addShape(pptx.shapes.ROUNDED_RECTANGLE, {
+          x: leftMargin + 0.35, y: 2.4, w: 2.0, h: 7.2,
+          fill: { color: 'F5F3EF' }, line: { color: 'D8B255', width: 1, dashType: 'dash' }
+        });
+        slide.addText("FOTO BOTOL\nTIDAK TERSEDIA", {
+          x: leftMargin + 0.35, y: 5.5, w: 2.0, h: 0.8,
+          fontFace: 'Calibri', fontSize: 9, color: '999999', align: 'center'
+        });
       }
+
+      // Metadata Spesifikasi (Sisi Kanan)
+      const colX = 3.6;
+      const colW = 4.07;
+
+      slide.addText(`${vintage} ${name}`, {
+        x: colX, y: 1.8, w: colW, h: 0.55,
+        fontFace: 'Georgia', fontSize: 16, bold: true, color: '2A2A2A'
+      });
+
+      function addSpecField(slide, label, value, x, y, w) {
+        slide.addText(label.toUpperCase(), {
+          x: x, y: y, w: w, h: 0.18,
+          fontFace: 'Calibri', fontSize: 8.5, bold: true, color: '666666'
+        });
+        slide.addText(value, {
+          x: x, y: y + 0.19, w: w, h: 0.38,
+          fontFace: 'Georgia', fontSize: 11, color: '1A1A1A'
+        });
+      }
+
+      const col1X = colX;
+      const col2X = colX + 2.1;
+      const subW = 1.95;
+
+      addSpecField(slide, 'Appellation', region, col1X, 2.5, subW);
+      addSpecField(slide, 'Harvest Date', vintage, col2X, 2.5, subW);
+
+      addSpecField(slide, 'Varietal', varietal, col1X, 3.2, subW);
+      addSpecField(slide, 'Alcohol', abv, col2X, 3.2, subW);
+
+      addSpecField(slide, 'Wine Type', type, col1X, 3.9, subW);
+      addSpecField(slide, 'Bottle Size', '750 ml', col2X, 3.9, subW);
+
+      addSpecField(slide, 'Serving Temp', servingTemp, col1X, 4.6, subW);
+      addSpecField(slide, 'Stock Status', stock, col2X, 4.6, subW);
+
+      // Garis Pembatas Putus-putus
+      slide.addShape(pptx.shapes.LINE, {
+        x: colX, y: 5.4, w: colW, h: 0,
+        line: { color: 'D0C4A4', width: 1, dashType: 'dash' }
+      });
+
+      // Section: About This Wine
+      slide.addText("ABOUT THIS WINE:", {
+        x: colX, y: 5.65, w: colW, h: 0.22,
+        fontFace: 'Calibri', fontSize: 9, bold: true, color: '555555'
+      });
+      slide.addText(notes, {
+        x: colX, y: 5.9, w: colW, h: 1.7,
+        fontFace: 'Georgia', fontSize: 10, color: '333333',
+        align: 'justify', lineSpacingMultiple: 1.25
+      });
+
+      // Section: Tasting & Food Pairing
+      slide.addText("TASTING NOTES:", {
+        x: colX, y: 7.75, w: colW, h: 0.22,
+        fontFace: 'Calibri', fontSize: 9, bold: true, color: '555555'
+      });
+
+      slide.addText([
+        { text: "FOOD PAIRING: ", options: { bold: true, color: '555555', fontSize: 9 } },
+        { text: pairing + "\n\n", options: { color: '333333', fontSize: 9.5 } },
+        { text: "STORAGE: ", options: { bold: true, color: '555555', fontSize: 9 } },
+        { text: storage, options: { color: '333333', fontSize: 9.5 } }
+      ], {
+        x: colX, y: 8.02, w: colW, h: 2.2,
+        fontFace: 'Georgia', lineSpacingMultiple: 1.2
+      });
+
+      // Footer
+      slide.addShape(pptx.shapes.LINE, {
+        x: leftMargin, y: 10.8, w: contentWidth, h: 0,
+        line: { color: 'EEEEEE', width: 0.8 }
+      });
+
+      slide.addText("PRIVATE RESERVE COLLECTION", {
+        x: leftMargin, y: 10.9, w: 2.5, h: 0.3,
+        fontFace: 'Calibri', fontSize: 8, color: '888888'
+      });
+      slide.addText("ESTATE GROWN & CELLAR BOTTLED", {
+        x: 2.8, y: 10.9, w: 2.6, h: 0.3,
+        fontFace: 'Calibri', fontSize: 8, color: '888888', align: 'center'
+      });
+      slide.addText("© MITRA BUANA INTIMAS", {
+        x: 5.2, y: 10.9, w: 2.47, h: 0.3,
+        fontFace: 'Calibri', fontSize: 8, color: '888888', align: 'right'
+      });
     }
 
-    // 1. DOWNLOAD SATUAN (PER PRODUK)
-    async function downloadSingleFactSheet(id) {
+    // 1. DOWNLOAD SATUAN PPTX
+    async function downloadSingleWinePPT(id) {
       const w = adminWines.find(item => item.id == id);
       if (!w) return alert('Produk tidak ditemukan!');
 
-      const modal = document.getElementById('pdfLoadingModal');
-      const modalText = document.getElementById('pdfLoadingText');
-      modalText.innerText = `Menghasilkan Fact Sheet untuk "${w.name}"...`;
+      const modal = document.getElementById('loadingModal');
+      const modalText = document.getElementById('loadingModalText');
+      modalText.innerText = `Menghasilkan PowerPoint untuk "${w.name}"...`;
       modal.style.display = 'flex';
 
-      const printArea = document.getElementById('factSheetPrintArea');
-      printArea.innerHTML = createFactSheetHTML(w);
+      try {
+        const pptx = new PptxGenJS();
+        pptx.defineLayout({ name: 'A4_PORTRAIT', width: 8.27, height: 11.69 });
+        pptx.layout = 'A4_PORTRAIT';
 
-      // Beri waktu agar gambar load
-      await new Promise(r => setTimeout(r, 600));
+        await buildWineSlide(pptx, w);
 
-      const cleanName = (w.name || 'Wine').replace(/[^a-zA-Z0-9_-]/g, '_');
-      const filename = `FactSheet_${cleanName}_${w.vintage || 'NV'}.pdf`;
-
-      await processPDF(printArea, filename);
-      modal.style.display = 'none';
+        const cleanName = (w.name || 'Wine').replace(/[^a-zA-Z0-9_-]/g, '_');
+        await pptx.writeFile({ fileName: `FactSheet_${cleanName}_${w.vintage || 'NV'}.pptx` });
+      } catch (err) {
+        console.error(err);
+        alert('Gagal membuat file PPTX: ' + err.message);
+      } finally {
+        modal.style.display = 'none';
+      }
     }
 
-    // 2. DOWNLOAD SEKALIGUS SEMUA PRODUK (KATALOG MULTI-HALAMAN)
-    async function downloadAllFactSheets() {
+    // 2. DOWNLOAD SEKALIGUS SEMUA PPTX (MULTI-SLIDE)
+    async function downloadAllWinesPPT() {
       if (!adminWines || adminWines.length === 0) {
         return alert('Tidak ada data produk di database!');
       }
 
-      const modal = document.getElementById('pdfLoadingModal');
-      const modalText = document.getElementById('pdfLoadingText');
-      modalText.innerText = `Sedang memproses ${adminWines.length} produk ke dalam satu file PDF... Harap tunggu sebentar.`;
+      const modal = document.getElementById('loadingModal');
+      const modalText = document.getElementById('loadingModalText');
+      modalText.innerText = `Sedang menyusun ${adminWines.length} produk ke dalam slide PowerPoint... Harap tunggu sebentar.`;
       modal.style.display = 'flex';
 
-      const printArea = document.getElementById('factSheetPrintArea');
-      printArea.innerHTML = adminWines.map(w => createFactSheetHTML(w)).join('');
+      try {
+        const pptx = new PptxGenJS();
+        pptx.defineLayout({ name: 'A4_PORTRAIT', width: 8.27, height: 11.69 });
+        pptx.layout = 'A4_PORTRAIT';
 
-      // Jeda lebih lama untuk render gambar yang banyak
-      await new Promise(r => setTimeout(r, 1500));
+        for (let i = 0; i < adminWines.length; i++) {
+          modalText.innerText = `Memproses produk (${i + 1}/${adminWines.length}): ${adminWines[i].name || 'Wine'}...`;
+          await buildWineSlide(pptx, adminWines[i]);
+        }
 
-      const todayStr = new Date().toISOString().split('T')[0];
-      const filename = `Katalog_Lengkap_FactSheet_PrivateReserve_${todayStr}.pdf`;
-
-      await processPDF(printArea, filename);
-      modal.style.display = 'none';
+        const todayStr = new Date().toISOString().split('T')[0];
+        await pptx.writeFile({ fileName: `Katalog_Lengkap_FactSheet_PrivateReserve_${todayStr}.pptx` });
+      } catch (err) {
+        console.error(err);
+        alert('Gagal mengekspor PowerPoint: ' + err.message);
+      } finally {
+        modal.style.display = 'none';
+      }
     }
 
     /* FUNGSI EKSPOR PRODUK YANG TERSEDIA KE EXCEL */
