@@ -144,43 +144,43 @@
         <div class="form-grid">
           <div class="form-group">
             <label>Nama Minuman *</label>
-            <input type="text" id="wineName" required placeholder="Contoh: CHATEAU HAUT MADRAC">
+            <input type="text" id="wineName" required placeholder="Contoh: ABSOLUT VODKA">
           </div>
           <div class="form-group">
             <label>Vintage (Tahun)</label>
-            <input type="text" id="wineVintage" placeholder="Contoh: 2021 atau NV">
+            <input type="text" id="wineVintage" placeholder="Contoh: 2021 atau NAS">
           </div>
           <div class="form-group">
             <label>Kategori (Type) *</label>
             <select id="wineType" required>
-              <option value="Red Wine">Red Wine</option>
-              <option value="White Wine">White Wine</option>
-              <option value="Rosé Wine">Rosé Wine</option>
-              <option value="Sparkling Wine">Sparkling Wine</option>
-              <option value="Whisky / Whiskey">Whisky / Whiskey</option>
               <option value="Vodka">Vodka</option>
+              <option value="Whisky / Whiskey">Whisky / Whiskey</option>
               <option value="Rum">Rum</option>
               <option value="Gin">Gin</option>
               <option value="Tequila / Mezcal">Tequila / Mezcal</option>
               <option value="Brandy / Cognac">Brandy / Cognac</option>
               <option value="Liqueur">Liqueur</option>
+              <option value="Red Wine">Red Wine</option>
+              <option value="White Wine">White Wine</option>
+              <option value="Rosé Wine">Rosé Wine</option>
+              <option value="Sparkling Wine">Sparkling Wine</option>
             </select>
           </div>
           <div class="form-group">
             <label>Wilayah (Region)</label>
-            <input type="text" id="wineRegion" placeholder="Contoh: France">
+            <input type="text" id="wineRegion" placeholder="Contoh: Åhus, Sweden">
           </div>
           <div class="form-group">
             <label>Varietal / Grape</label>
-            <input type="text" id="wineVarietal" placeholder="Contoh: Bordeaux Blend">
+            <input type="text" id="wineVarietal" placeholder="Contoh: Winter Wheat">
           </div>
           <div class="form-group">
             <label>Alcohol (ABV)</label>
-            <input type="text" id="wineAbv" placeholder="Contoh: 13-14%">
+            <input type="text" id="wineAbv" placeholder="Contoh: 40%">
           </div>
           <div class="form-group">
             <label>Suhu Penyajian</label>
-            <input type="text" id="wineServingTemp" placeholder="Contoh: 16-18°C">
+            <input type="text" id="wineServingTemp" placeholder="Contoh: Ice Cold (0°C - 4°C)">
           </div>
           <div class="form-group">
             <label>Status Stok</label>
@@ -212,11 +212,11 @@
           </div>
           <div class="form-group full-width">
             <label>Food Pairing</label>
-            <input type="text" id="winePairing" placeholder="Contoh: Roast Beef, Lamb">
+            <input type="text" id="winePairing" placeholder="Contoh: Chilled Shot / Vodka Tonic / Cocktail">
           </div>
           <div class="form-group full-width">
-            <label>Storage Note</label>
-            <input type="text" id="wineStorageNote" placeholder="Contoh: Simpan miring">
+            <label>Storage Note / Distillation</label>
+            <input type="text" id="wineStorageNote" placeholder="Contoh: Continuous Distillation">
           </div>
         </div>
         <div class="btn-group">
@@ -430,7 +430,7 @@
       document.getElementById('wineId').value = w.id;
       document.getElementById('wineName').value = w.name || '';
       document.getElementById('wineVintage').value = w.vintage || '';
-      document.getElementById('wineType').value = w.type || 'Red Wine';
+      document.getElementById('wineType').value = w.type || 'Vodka';
       document.getElementById('wineRegion').value = w.region || '';
       document.getElementById('wineVarietal').value = w.varietal || '';
       document.getElementById('wineAbv').value = w.abv || '';
@@ -523,7 +523,7 @@
     }
 
     /* ========================================================
-       MODUL SLIDE BUILDER (THEME: LUXURY EDITORIAL & IVORY GOLD)
+       MODUL FACT SHEET PPTX BUILDER (IDENTIK DENGAN GAMBAR CONTOH)
        ======================================================== */
     async function convertImageToBase64Safe(url) {
       if (!url || typeof url !== 'string' || !url.trim()) return null;
@@ -546,208 +546,218 @@
     async function buildWineSlide(pptx, w) {
       const slide = pptx.addSlide();
       
-      // 1. Background Warm Ivory & Border Bingkai Ganda Mewah
-      slide.background = { color: 'FBF9F5' };
+      // 1. Background Ivory & Bingkai Ganda Luar & Dalam
+      slide.background = { color: 'FAF8F5' };
 
-      // Outer Frame
+      // Outer Thin Border
       slide.addShape(pptx.shapes.RECTANGLE, {
-        x: 0.35, y: 0.35, w: 7.57, h: 10.99,
+        x: 0.40, y: 0.40, w: 7.47, h: 10.89,
         fill: { type: 'none' },
-        line: { color: 'D8C59A', width: 1 }
+        line: { color: 'CBB383', width: 1.1 }
       });
-      // Inner Frame
+      // Inner Subtle Border
       slide.addShape(pptx.shapes.RECTANGLE, {
-        x: 0.42, y: 0.42, w: 7.43, h: 10.85,
+        x: 0.47, y: 0.47, w: 7.33, h: 10.75,
         fill: { type: 'none' },
-        line: { color: 'EFE6D5', width: 0.6 }
+        line: { color: 'EFE5D0', width: 0.7 }
       });
 
-      // 2. Header Mewah
+      // 2. Header Bergaris Putus-putus
+      const isWine = (w.type || '').toLowerCase().includes('wine');
+      const headerTitle = isWine ? "FINE WINES" : "SPIRITS";
+
       slide.addShape(pptx.shapes.LINE, {
-        x: 0.7, y: 0.65, w: 6.87, h: 0,
+        x: 0.75, y: 0.68, w: 6.77, h: 0,
         line: { color: 'C5A059', width: 1.2, dashType: 'dash' }
       });
 
-      slide.addText("GRAPE HEART", {
-        x: 0.7, y: 0.72, w: 5.2, h: 0.4,
-        fontFace: 'Georgia', fontSize: 24, color: '4A151B', bold: true
+      slide.addText(headerTitle, {
+        x: 0.75, y: 0.74, w: 5.0, h: 0.42,
+        fontFace: 'Georgia', fontSize: 25, color: '3B0F18', bold: true
       });
 
-      slide.addText("Private Reserve & Vineyards", {
-        x: 0.7, y: 1.12, w: 5.2, h: 0.3,
-        fontFace: 'Georgia', fontSize: 13, color: 'C5A059', italic: true
+      slide.addText("Private Reserve & Cellars", {
+        x: 0.75, y: 1.16, w: 5.0, h: 0.28,
+        fontFace: 'Georgia', fontSize: 13, color: 'BFA054', italic: true
       });
 
-      // Crest Ornamen Emas di Sudut Kanan Atas
+      // Simbol Fleur-de-lis Emas di Kanan Atas
       slide.addText("⚜", {
-        x: 6.75, y: 0.75, w: 0.8, h: 0.6,
-        fontFace: 'Georgia', fontSize: 28, color: 'C5A059', align: 'center'
+        x: 6.65, y: 0.82, w: 0.85, h: 0.55,
+        fontFace: 'Georgia', fontSize: 27, color: 'C5A059', align: 'center'
       });
 
       slide.addShape(pptx.shapes.LINE, {
-        x: 0.7, y: 1.5, w: 6.87, h: 0,
+        x: 0.75, y: 1.52, w: 6.77, h: 0,
         line: { color: 'C5A059', width: 1.2, dashType: 'dash' }
       });
 
-      // 3. Normalisasi Data
-      const name = (w.name || 'EXCLUSIVE VINTAGE').toUpperCase();
-      const vintage = w.vintage || 'NV';
-      const region = w.region || 'Suisun Valley, North Coast, AVA';
-      const varietal = w.varietal || 'Cabernet Sauvignon Blend';
-      const type = w.type || 'Red Wine';
-      const abv = w.abv || '14.5%';
-      const servingTemp = w.serving_temp || w.servingTemp || '16°C - 18°C';
-      const stock = w.stock_status || w.stockStatus || 'In Stock';
+      // 3. Normalisasi Data Produk
+      const name = (w.name || 'ABSOLUT VODKA').toUpperCase();
+      const vintage = w.vintage || (isWine ? 'NV' : 'NAS');
+      const region = w.region || (isWine ? 'Bordeaux, France' : 'Åhus, Sweden');
+      const varietal = w.varietal || (isWine ? 'Cabernet Sauvignon' : 'Winter Wheat');
+      const type = w.type || (isWine ? 'Red Wine' : 'Vodka');
+      const abv = w.abv || (isWine ? '13.5%' : '40%');
+      const servingTemp = w.serving_temp || w.servingTemp || (isWine ? '16°C - 18°C' : 'Ice Cold (0°C - 4°C)');
       const rawImgUrl = w.image_url || w.imageUrl || '';
+      
       const notes = (w.notes && w.notes.trim() !== '' && w.notes !== '-') 
         ? w.notes 
-        : 'This wine offers an elegant structure with smooth and round tannins that expand into a lingering finish, showcasing depth and purity crafted from pristine estate harvests.';
-      const pairing = (w.pairing && w.pairing !== '-') ? w.pairing : 'Prime Ribeye, Braised Lamb Shank, Aged Cheeses';
-      const storage = (w.storage_note && w.storage_note !== '-') ? w.storage_note : 'Store horizontally in a cool, temperature-controlled environment away from direct sunlight.';
+        : `${name} is a premium crafted beverage made exclusively from natural ingredients and continuous distillation, offering exceptional purity and a smooth, clean character.`;
+      
+      const tastingNotes = `${name} offers a clean nose with hints of character. The palate is exceptionally smooth and full-bodied, finishing fresh, crisp, and balanced with pleasant warmth.`;
+      const pairing = (w.pairing && w.pairing !== '-') ? w.pairing : (isWine ? 'Grilled Prime Steak, Lamb, Aged Cheeses' : 'Chilled Shot / Vodka Tonic / Cocktail');
+      const storage = (w.storage_note && w.storage_note !== '-') ? w.storage_note : (isWine ? 'Store horizontally in a cool cellar' : 'Continuous Distillation');
 
-      // 4. Pedestal & Foto Botol (Kolom Kiri)
-      // Backdrop Pedestal Halus
+      // 4. Kolom Kiri: Pedestal & Botol
       slide.addShape(pptx.shapes.ROUNDED_RECTANGLE, {
-        x: 0.7, y: 1.75, w: 2.7, h: 8.65,
-        fill: { color: 'F4EFE6' },
-        line: { color: 'E5DAC7', width: 0.8 }
+        x: 0.85, y: 2.75, w: 2.95, h: 4.15,
+        fill: { color: 'EDE7DC' },
+        line: { color: 'D5C8B4', width: 0.8 }
       });
 
       const base64Img = await convertImageToBase64Safe(rawImgUrl);
       if (base64Img) {
         slide.addImage({
           data: base64Img,
-          x: 0.8, y: 1.95, w: 2.5, h: 8.25,
-          sizing: { type: 'contain', w: 2.5, h: 8.25 }
+          x: 0.90, y: 2.82, w: 2.85, h: 4.01,
+          sizing: { type: 'contain', w: 2.85, h: 4.01 }
         });
       } else {
-        slide.addText("BOTOL FOTO\nBELUM ADA", {
-          x: 0.8, y: 5.6, w: 2.5, h: 0.8,
+        slide.addText("FOTO BOTOL\nTIDAK TERSEDIA", {
+          x: 0.90, y: 4.4, w: 2.85, h: 0.8,
           fontFace: 'Calibri', fontSize: 9, color: 'B0A492', align: 'center', bold: true
         });
       }
 
-      // 5. Metadata & Spesifikasi (Kolom Kanan)
-      const colX = 3.65;
-      const colW = 3.92;
+      // 5. Kolom Kanan: Pill Badge & Judul Produk Terpusat
+      const colX = 4.18;
+      const colW = 3.34;
 
-      // Badge Vintage & Tipe
+      // Pill Badge (NAS • VODKA)
+      const pillW = 2.0;
       slide.addShape(pptx.shapes.ROUNDED_RECTANGLE, {
-        x: colX, y: 1.75, w: 2.2, h: 0.28,
-        fill: { color: '4A151B' },
+        x: colX + (colW - pillW) / 2, y: 1.74, w: pillW, h: 0.28,
+        fill: { color: '42131A' },
         line: { type: 'none' }
       });
       slide.addText(`${vintage} • ${type.toUpperCase()}`, {
-        x: colX, y: 1.76, w: 2.2, h: 0.26,
+        x: colX + (colW - pillW) / 2, y: 1.75, w: pillW, h: 0.26,
         fontFace: 'Calibri', fontSize: 8.5, bold: true, color: 'FFFFFF', align: 'center'
       });
 
-      // Judul Nama Minuman
+      // Judul Nama Minuman (Tepat di tengah atas tabel kartu)
       slide.addText(name, {
-        x: colX, y: 2.1, w: colW, h: 0.55,
-        fontFace: 'Georgia', fontSize: 16, bold: true, color: '242121'
+        x: colX, y: 2.15, w: colW, h: 0.45,
+        fontFace: 'Georgia', fontSize: 16.5, bold: true, color: '0D2235', align: 'center'
       });
 
-      // Grid Cards Spesifikasi
+      // 6. 8 Kotak Spesifikasi Putih (2 Kolom x 4 Baris)
       function addSpecCard(x, y, w, h, label, value) {
         slide.addShape(pptx.shapes.ROUNDED_RECTANGLE, {
           x: x, y: y, w: w, h: h,
           fill: { color: 'FFFFFF' },
-          line: { color: 'E8DEC9', width: 0.8 }
+          line: { color: 'D8C59A', width: 0.8 }
         });
         slide.addText(label.toUpperCase(), {
-          x: x + 0.1, y: y + 0.06, w: w - 0.2, h: 0.16,
-          fontFace: 'Calibri', fontSize: 7.5, bold: true, color: '9E7D3B'
+          x: x + 0.08, y: y + 0.05, w: w - 0.16, h: 0.16,
+          fontFace: 'Calibri', fontSize: 7.2, bold: true, color: '9E7D3B'
         });
         slide.addText(value, {
-          x: x + 0.1, y: y + 0.22, w: w - 0.2, h: 0.32,
-          fontFace: 'Georgia', fontSize: 10, color: '201F1F', bold: true
+          x: x + 0.08, y: y + 0.20, w: w - 0.16, h: 0.30,
+          fontFace: 'Georgia', fontSize: 9.8, color: '1A1A1A', bold: true
         });
       }
 
-      const cardW = 1.9;
-      const cardH = 0.58;
+      const cardW = 1.62;
+      const cardH = 0.54;
       const col1X = colX;
-      const col2X = colX + 2.02;
+      const col2X = colX + cardW + 0.10;
 
       addSpecCard(col1X, 2.75, cardW, cardH, 'Appellation / Wilayah', region);
       addSpecCard(col2X, 2.75, cardW, cardH, 'Harvest Date', vintage);
 
-      addSpecCard(col1X, 3.42, cardW, cardH, 'Varietal / Grape', varietal);
-      addSpecCard(col2X, 3.42, cardW, cardH, 'Alcohol (ABV)', abv);
+      addSpecCard(col1X, 3.37, cardW, cardH, 'Varietal / Grape', varietal);
+      addSpecCard(col2X, 3.37, cardW, cardH, 'Alcohol (ABV)', abv);
 
-      addSpecCard(col1X, 4.09, cardW, cardH, 'Wine Type', type);
-      addSpecCard(col2X, 4.09, cardW, cardH, 'Bottle Size', '750 ml');
+      addSpecCard(col1X, 3.99, cardW, cardH, 'Wine Type', type);
+      addSpecCard(col2X, 3.99, cardW, cardH, 'Bottle Size', '750 ml');
 
-      addSpecCard(col1X, 4.76, cardW, cardH, 'Serving Temperature', servingTemp);
-      addSpecCard(col2X, 4.76, cardW, cardH, 'Stock Status', stock);
+      addSpecCard(col1X, 4.61, cardW, cardH, 'Serving Temperature', servingTemp);
+      addSpecCard(col2X, 4.61, cardW, cardH, 'Barcode', '-');
 
-      // Section: About This Wine Card
+      // 7. Box 1: ABOUT THIS WINE (Bergaris Emas di Kiri)
+      const box1Y = 5.30;
+      const box1H = 1.60;
       slide.addShape(pptx.shapes.ROUNDED_RECTANGLE, {
-        x: colX, y: 5.5, w: colW, h: 2.1,
-        fill: { color: 'FAF7F2' },
-        line: { color: 'E5DAC7', width: 0.8 }
+        x: colX, y: box1Y, w: colW, h: box1H,
+        fill: { color: 'FBF9F4' },
+        line: { color: 'E2D7C3', width: 0.8 }
       });
-      // Gold left accent line
       slide.addShape(pptx.shapes.RECTANGLE, {
-        x: colX, y: 5.5, w: 0.08, h: 2.1,
+        x: colX, y: box1Y, w: 0.08, h: box1H,
         fill: { color: 'C5A059' }, line: { type: 'none' }
       });
-
       slide.addText("ABOUT THIS WINE", {
-        x: colX + 0.18, y: 5.62, w: colW - 0.3, h: 0.2,
+        x: colX + 0.18, y: box1Y + 0.08, w: colW - 0.3, h: 0.2,
         fontFace: 'Calibri', fontSize: 8.5, bold: true, color: '4A151B'
       });
       slide.addText(notes, {
-        x: colX + 0.18, y: 5.86, w: colW - 0.3, h: 1.65,
-        fontFace: 'Georgia', fontSize: 9.5, color: '333030',
-        align: 'justify', lineSpacingMultiple: 1.2
+        x: colX + 0.18, y: box1Y + 0.28, w: colW - 0.3, h: box1H - 0.35,
+        fontFace: 'Georgia', fontSize: 8.8, color: '2B2B2B',
+        align: 'justify', lineSpacingMultiple: 1.15
       });
 
-      // Section: Tasting & Food Pairing Card
+      // 8. Box 2: TASTING & SOMMELIER NOTES (Bergaris Burgundy di Kiri)
+      const box2Y = 7.05;
+      const box2H = 3.35;
       slide.addShape(pptx.shapes.ROUNDED_RECTANGLE, {
-        x: colX, y: 7.75, w: colW, h: 2.65,
-        fill: { color: 'FAF7F2' },
-        line: { color: 'E5DAC7', width: 0.8 }
+        x: colX, y: box2Y, w: colW, h: box2H,
+        fill: { color: 'FBF9F4' },
+        line: { color: 'E2D7C3', width: 0.8 }
       });
-      // Burgundy left accent line
       slide.addShape(pptx.shapes.RECTANGLE, {
-        x: colX, y: 7.75, w: 0.08, h: 2.65,
+        x: colX, y: box2Y, w: 0.08, h: box2H,
         fill: { color: '4A151B' }, line: { type: 'none' }
       });
-
       slide.addText("TASTING & SOMMELIER NOTES", {
-        x: colX + 0.18, y: 7.88, w: colW - 0.3, h: 0.2,
+        x: colX + 0.18, y: box2Y + 0.10, w: colW - 0.3, h: 0.2,
         fontFace: 'Calibri', fontSize: 8.5, bold: true, color: '4A151B'
+      });
+      slide.addText(tastingNotes, {
+        x: colX + 0.18, y: box2Y + 0.32, w: colW - 0.3, h: 1.15,
+        fontFace: 'Georgia', fontSize: 8.8, color: '2B2B2B',
+        align: 'justify', lineSpacingMultiple: 1.15
       });
 
       slide.addText([
-        { text: "FOOD PAIRING:\n", options: { bold: true, color: '9E7D3B', fontSize: 8.5 } },
-        { text: pairing + "\n\n", options: { color: '2B2727', fontSize: 9.5 } },
-        { text: "STORAGE RECOMMENDATION:\n", options: { bold: true, color: '9E7D3B', fontSize: 8.5 } },
-        { text: storage, options: { color: '2B2727', fontSize: 9.5 } }
+        { text: "FOOD PAIRING:\n", options: { bold: true, color: '9E7D3B', fontSize: 8.2 } },
+        { text: pairing + "\n\n", options: { color: '2B2B2B', fontSize: 9.0 } },
+        { text: "STORAGE RECOMMENDATION:\n", options: { bold: true, color: '9E7D3B', fontSize: 8.2 } },
+        { text: storage, options: { color: '2B2B2B', fontSize: 9.0 } }
       ], {
-        x: colX + 0.18, y: 8.12, w: colW - 0.3, h: 2.2,
+        x: colX + 0.18, y: box2Y + 1.60, w: colW - 0.3, h: 1.65,
         fontFace: 'Georgia', lineSpacingMultiple: 1.15
       });
 
-      // 6. Footer Mewah
+      // 9. Footer
       slide.addShape(pptx.shapes.LINE, {
-        x: 0.7, y: 10.65, w: 6.87, h: 0,
+        x: 0.75, y: 10.65, w: 6.77, h: 0,
         line: { color: 'D8C59A', width: 0.8 }
       });
 
       slide.addText("PRIVATE RESERVE COLLECTION", {
-        x: 0.7, y: 10.75, w: 2.3, h: 0.25,
-        fontFace: 'Calibri', fontSize: 7.5, color: '8E8474', bold: true
+        x: 0.75, y: 10.74, w: 2.2, h: 0.22,
+        fontFace: 'Calibri', fontSize: 7.5, color: '7A7062', bold: true
       });
       slide.addText("ESTATE GROWN & CELLAR BOTTLED", {
-        x: 3.0, y: 10.75, w: 2.3, h: 0.25,
-        fontFace: 'Calibri', fontSize: 7.5, color: '8E8474', align: 'center', bold: true
+        x: 3.03, y: 10.74, w: 2.2, h: 0.22,
+        fontFace: 'Calibri', fontSize: 7.5, color: '7A7062', align: 'center', bold: true
       });
       slide.addText("© MITRA BUANA INTIMAS", {
-        x: 5.3, y: 10.75, w: 2.27, h: 0.25,
-        fontFace: 'Calibri', fontSize: 7.5, color: '8E8474', align: 'right', bold: true
+        x: 5.32, y: 10.74, w: 2.2, h: 0.22,
+        fontFace: 'Calibri', fontSize: 7.5, color: '7A7062', align: 'right', bold: true
       });
     }
 
@@ -758,7 +768,7 @@
 
       const modal = document.getElementById('loadingModal');
       const modalText = document.getElementById('loadingModalText');
-      modalText.innerText = `Membuat Fact Sheet mewah untuk "${w.name}"...`;
+      modalText.innerText = `Menyusun Fact Sheet untuk "${w.name}"...`;
       modal.style.display = 'flex';
 
       try {
@@ -768,7 +778,7 @@
 
         await buildWineSlide(pptx, w);
 
-        const cleanName = (w.name || 'Wine').replace(/[^a-zA-Z0-9_-]/g, '_');
+        const cleanName = (w.name || 'Drink').replace(/[^a-zA-Z0-9_-]/g, '_');
         await pptx.writeFile({ fileName: `FactSheet_${cleanName}_${w.vintage || 'NV'}.pptx` });
       } catch (err) {
         console.error(err);
@@ -786,7 +796,7 @@
 
       const modal = document.getElementById('loadingModal');
       const modalText = document.getElementById('loadingModalText');
-      modalText.innerText = `Menyusun ${adminWines.length} produk ke dalam slide PowerPoint... Harap tunggu sebentar.`;
+      modalText.innerText = `Sedang menyusun ${adminWines.length} produk ke dalam slide PowerPoint... Harap tunggu sebentar.`;
       modal.style.display = 'flex';
 
       try {
@@ -795,7 +805,7 @@
         pptx.layout = 'A4_PORTRAIT';
 
         for (let i = 0; i < adminWines.length; i++) {
-          modalText.innerText = `Memproses slide (${i + 1}/${adminWines.length}): ${adminWines[i].name || 'Wine'}...`;
+          modalText.innerText = `Memproses slide (${i + 1}/${adminWines.length}): ${adminWines[i].name || 'Drink'}...`;
           await buildWineSlide(pptx, adminWines[i]);
         }
 
@@ -859,17 +869,17 @@
       const templateData = [
         {
           "FOTO": "",
-          "NAMA MINUMAN": "MASET RIOJA TEMPRANILLO",
-          "VINTAGE": "2022",
-          "KATEGORI": "Red Wine",
-          "WILAYAH": "Rioja DOCa, Spain",
-          "VARIETAL": "Tempranillo",
-          "ABV": "13%",
-          "SUHU PENYAJIAN": "16°C - 18°C",
+          "NAMA MINUMAN": "ABSOLUT VODKA",
+          "VINTAGE": "NAS",
+          "KATEGORI": "Vodka",
+          "WILAYAH": "Åhus, Sweden",
+          "VARIETAL": "Winter Wheat",
+          "ABV": "40%",
+          "SUHU PENYAJIAN": "Ice Cold (0°C - 4°C)",
           "STATUS STOK": "In Stock",
           "TASTING NOTES": "-",
-          "FOOD PAIRING": "-",
-          "STORAGE NOTE": "-"
+          "FOOD PAIRING": "Chilled Shot / Vodka Tonic / Cocktail",
+          "STORAGE NOTE": "Continuous Distillation"
         }
       ];
 
@@ -894,7 +904,7 @@
           image_url: row["FOTO"] || '', 
           name: row["NAMA MINUMAN"] || row.Name || row.name || '',
           vintage: row["VINTAGE"] || row.Vintage || row.vintage || 'NV',
-          type: row["KATEGORI"] || row.Type || row.type || 'Red Wine',
+          type: row["KATEGORI"] || row.Type || row.type || 'Vodka',
           region: row["WILAYAH"] || row.Region || row.region || '-',
           varietal: row["VARIETAL"] || row.Varietal || row.varietal || '-',
           abv: row["ABV"] || row.ABV || row.abv || '-',
