@@ -74,8 +74,8 @@
 
     /* LOADING MODAL UNTUK EXPORT PDF */
     #pdfLoadingModal {
-      position: fixed; inset: 0; background: rgba(0, 0, 0, 0.82);
-      backdrop-filter: blur(8px); z-index: 20000; display: none;
+      position: fixed; inset: 0; background: rgba(0, 0, 0, 0.95);
+      z-index: 99999; display: none; /* Sembunyikan default */
       align-items: center; justify-content: center; flex-direction: column; gap: 1rem; color: #d8b255; font-size: 1.1rem;
     }
     .spinner {
@@ -85,20 +85,24 @@
     }
     @keyframes spin { to { transform: rotate(360deg); } }
 
-    /* TEMPLATE FACT SHEET (PRINT & PDF ENGINE) */
+    /* =======================================================
+       PERBAIKAN: TEMPLATE FACT SHEET (PRINT & PDF ENGINE) 
+       ======================================================= */
+    /* Container untuk render ditaruh di pojok kiri atas tapi tertutup z-index */
     #factSheetPrintArea {
-      position: fixed;
-      left: -9999px;
+      position: absolute;
       top: 0;
+      left: 0;
       width: 210mm;
-      z-index: -100;
+      z-index: -100; /* Tetap berada di layer bawah body, agar tidak menutupi UI */
       background: #ffffff;
+      opacity: 0.01; /* Dibuat hampir transparan agar tidak mengganggu mata, tapi tetap dirender oleh browser */
+      pointer-events: none; /* Supaya tidak bisa diklik */
     }
 
     .fact-sheet-page {
       width: 210mm;
-      height: 296mm;
-      max-height: 296mm;
+      height: 297mm;
       box-sizing: border-box;
       padding: 16mm 18mm 12mm 18mm;
       background: #ffffff;
@@ -273,7 +277,8 @@
     <div id="pdfLoadingText">Sedang membuat Fact Sheet PDF... Harap tunggu sebentar.</div>
   </div>
 
-  <!-- CONTAINER RENDER OFF-SCREEN UNTUK FACT SHEET -->
+  <!-- CONTAINER RENDER UNTUK FACT SHEET -->
+  <!-- Ditempatkan di posisi absolut tanpa left: -9999px agar html2canvas bisa merendernya -->
   <div id="factSheetPrintArea"></div>
 
   <div id="loginOverlay" class="login-overlay">
@@ -704,7 +709,7 @@
     }
 
     /* ========================================================
-       MODUL FACT SHEET BUILDER & PDF DOWNLOAD
+       MODUL FACT SHEET BUILDER & PDF DOWNLOAD (DIPERBAIKI)
        ======================================================== */
     const DEFAULT_BOTTLE_SVG = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 560" width="160" height="560"><path d="M68,10 L92,10 L92,30 L98,38 L98,140 C125,185 145,235 145,310 L145,520 C145,540 135,550 115,550 L45,550 C25,550 15,540 15,520 L15,310 C15,235 35,185 62,140 L62,38 L68,30 Z" fill="%231a1a1a" stroke="%23333333" stroke-width="3"/><rect x="25" y="270" width="110" height="150" fill="%232b2b2b" rx="4"/><rect x="35" y="295" width="90" height="100" fill="%23f7f4ec" rx="2"/><path d="M68,10 L92,10 L92,60 L68,60 Z" fill="%23d8b255"/></svg>`;
 
@@ -819,31 +824,18 @@
       `;
     }
 
-    // 1. DOWNLOAD SATUAN (PER PRODUK)
-    async function downloadSingleFactSheet(id) {
-      const w = adminWines.find(item => item.id == id);
-      if (!w) return alert('Produk tidak ditemukan!');
-
-      const printArea = document.getElementById('factSheetPrintArea');
-      printArea.innerHTML = createFactSheetHTML(w);
-
-      const modal = document.getElementById('pdfLoadingModal');
-      const modalText = document.getElementById('pdfLoadingText');
-      modalText.innerText = `Menghasilkan Fact Sheet untuk "${w.name}"...`;
-      modal.style.display = 'flex';
-
-      // Beri sedikit jeda agar gambar termuat di DOM off-screen
-      await new Promise(r => setTimeout(r, 600));
-
-      const cleanName = (w.name || 'Wine').replace(/[^a-zA-Z0-9_-]/g, '_');
-      const filename = `FactSheet_${cleanName}_${w.vintage || 'NV'}.pdf`;
-
+    async function processPDF(printArea, filename) {
+      // Pastikan opacity dinaikkan sedikit khusus saat dirender agar html2canvas bisa membacanya 
+      // (meski tetap tersembunyi oleh modal yang z-indexnya lebih tinggi)
+      printArea.style.opacity = '1';
+      
       const opt = {
         margin: 0,
         filename: filename,
         image: { type: 'jpeg', quality: 0.98 },
         html2canvas: { scale: 2, useCORS: true, logging: false },
-        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+        pagebreak: { mode: ['css', 'legacy'] }
       };
 
       try {
@@ -852,9 +844,33 @@
         console.error(err);
         alert('Terjadi kesalahan saat membuat PDF: ' + err.message);
       } finally {
-        modal.style.display = 'none';
+        // Kembalikan ke tidak terlihat setelah render selesai
+        printArea.style.opacity = '0.01';
         printArea.innerHTML = '';
       }
+    }
+
+    // 1. DOWNLOAD SATUAN (PER PRODUK)
+    async function downloadSingleFactSheet(id) {
+      const w = adminWines.find(item => item.id == id);
+      if (!w) return alert('Produk tidak ditemukan!');
+
+      const modal = document.getElementById('pdfLoadingModal');
+      const modalText = document.getElementById('pdfLoadingText');
+      modalText.innerText = `Menghasilkan Fact Sheet untuk "${w.name}"...`;
+      modal.style.display = 'flex';
+
+      const printArea = document.getElementById('factSheetPrintArea');
+      printArea.innerHTML = createFactSheetHTML(w);
+
+      // Beri waktu agar gambar load
+      await new Promise(r => setTimeout(r, 600));
+
+      const cleanName = (w.name || 'Wine').replace(/[^a-zA-Z0-9_-]/g, '_');
+      const filename = `FactSheet_${cleanName}_${w.vintage || 'NV'}.pdf`;
+
+      await processPDF(printArea, filename);
+      modal.style.display = 'none';
     }
 
     // 2. DOWNLOAD SEKALIGUS SEMUA PRODUK (KATALOG MULTI-HALAMAN)
@@ -869,32 +885,16 @@
       modal.style.display = 'flex';
 
       const printArea = document.getElementById('factSheetPrintArea');
-      // Gabungkan semua template produk
       printArea.innerHTML = adminWines.map(w => createFactSheetHTML(w)).join('');
 
-      await new Promise(r => setTimeout(r, 1200));
+      // Jeda lebih lama untuk render gambar yang banyak
+      await new Promise(r => setTimeout(r, 1500));
 
       const todayStr = new Date().toISOString().split('T')[0];
       const filename = `Katalog_Lengkap_FactSheet_PrivateReserve_${todayStr}.pdf`;
 
-      const opt = {
-        margin: 0,
-        filename: filename,
-        image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true, logging: false },
-        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-        pagebreak: { mode: ['css', 'legacy'] }
-      };
-
-      try {
-        await html2pdf().set(opt).from(printArea).save();
-      } catch (err) {
-        console.error(err);
-        alert('Terjadi kesalahan saat mengekspor katalog: ' + err.message);
-      } finally {
-        modal.style.display = 'none';
-        printArea.innerHTML = '';
-      }
+      await processPDF(printArea, filename);
+      modal.style.display = 'none';
     }
 
     /* FUNGSI EKSPOR PRODUK YANG TERSEDIA KE EXCEL */
